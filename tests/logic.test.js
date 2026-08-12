@@ -26,7 +26,12 @@ t=[['red'],['red']];assert(G.isLegalMove(t,0,1,4));
 t=[['red'],[]];assert(G.isLegalMove(t,0,1,4));
 t=[['red'],['blue','yellow','green','purple']];assert(!G.isLegalMove(t,0,1,4));
 assert(!G.isLegalMove([['red'],[]],0,0,4));assert(!G.isLegalMove([[],['red']],0,1,4));
-assert(G.isCleared([['red','red','red','red'],[]],4));assert(!G.isCleared([['red'],[]],4));assert(H.choose([['red'],['red'],[]],4));console.log('single-ball logic tests passed');
+assert(G.isCleared([['red','red','red','red'],[]],4));assert(!G.isCleared([['red'],[]],4));assert(H.choose([['red'],['red'],[]],4));
+// Stuck means exactly: the board is not cleared and no from/to pair is legal.
+assert(!G.isStuck([['red','red'],['blue','blue']],2),'cleared boards are never stuck');
+assert(!G.isStuck([['red'],[]],2),'a board with a legal move is not stuck');
+assert(G.isStuck([['red','blue'],['blue','red']],2),'a non-cleared board with no legal move is stuck');
+console.log('single-ball and stuck-state logic tests passed');
 
 // The UI stores one pre-move snapshot per operation, so one undo restores one
 // ball and its corresponding Moves increment.
@@ -38,6 +43,7 @@ console.log('single-ball undo snapshot test passed');
 vm.runInContext(fs.readFileSync('data/stages.js','utf8'),context);const stages=context.window.CR_STAGES;
 assert.equal(stages.length,30);
 stages.forEach(stage=>{
+  assert(!G.isStuck(stage.tubes,4),`stage ${stage.id}: initial board must not be stuck`);
   const buffers=stage.id<14?2:1;
   assert.equal(stage.tubes.length,stage.colors+buffers,`stage ${stage.id}: tube count`);
   assert.equal(stage.tubes.filter(t=>t.length===0).length,buffers,`stage ${stage.id}: buffers`);
@@ -61,3 +67,14 @@ assert(legalHint);assert(G.isLegalMove(hintBoard,legalHint.from,legalHint.to,4))
 const destination=hintBoard[legalHint.to];
 assert(!destination.length||hintBoard[legalHint.from].at(-1)===destination.at(-1));
 console.log('all 30 stages have valid single-ball solution certificates');
+
+
+// The accessible stuck dialog provides both recovery actions, and each action
+// is wired to the same undo/restart paths that clear the stuck state first.
+assert(html.includes('id="stuck-modal"')&&html.includes('id="stuck-title">STUCK!</h2>'));
+assert(html.includes('id="stuck-undo-btn"')&&html.includes('id="stuck-restart-btn"'));
+const appSource=fs.readFileSync('js/app.js','utf8');
+assert(appSource.includes("function undo(){if(state.isAnimating||state.isCleared||!state.history.length)return;hideStuck();"));
+assert(appSource.includes("function restart(){if(state.isAnimating)return;hideStuck();"));
+assert(appSource.includes("if(state.isStuck||CRGame.isStuck(state.tubes,state.capacity)){showStuck();return;}"));
+console.log('stuck recovery and hint UI wiring tests passed');
