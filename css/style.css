@@ -6,3 +6,5 @@
 .world{filter:none}.world:after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;backdrop-filter:grayscale(var(--gray));-webkit-backdrop-filter:grayscale(var(--gray));transition:backdrop-filter 1.2s,-webkit-backdrop-filter 1.2s}.tube-board,.tutorial{z-index:2}
 /* At extreme browser text zoom, give the level its own full-width row. */
 @media(max-width:260px){.game-head{grid-template-columns:1fr;padding-top:52px;position:relative}.game-head .icon-btn{position:absolute;top:0;left:0}.game-identity{padding-right:0}.level-progress{word-break:keep-all}.game-stats{grid-column:1}}
+
+.stuck-modal{background:#17233bcf}.stuck-modal .modal-card{border:3px solid #ff6577;box-shadow:0 20px 55px #111a2f80}.stuck-modal h2{color:#d93450;font-size:clamp(36px,12vw,52px);letter-spacing:2px}.stuck-mark{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 8px;border-radius:50%;background:#ff5d73;color:white;font-size:40px;font-weight:950}.modal-card .stuck-help{margin:14px 0 18px;color:var(--ink);font-size:14px;line-height:1.7;letter-spacing:0;font-weight:700}.stuck-modal button{display:block;margin:8px auto}
