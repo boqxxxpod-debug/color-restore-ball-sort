@@ -1,0 +1,23 @@
+{
+  "command": "node tools/generate-levels.js --count=10000 --seed=20260812 --state-limit=60",
+  "generated": 10000,
+  "evaluated": 10000,
+  "unique": 7381,
+  "accepted": 5902,
+  "rejects": {
+    "duplicate": 2535,
+    "already-cleared": 84,
+    "too-simple": 2,
+    "unsolvable": 1477,
+    "search-limit": 0,
+    "certificate-invalid": 0
+  },
+  "elapsedSeconds": 12.2,
+  "ranked": {
+    "Easy": 20,
+    "Normal": 30,
+    "Hard": 30,
+    "Expert": 30,
+    "Final": 20
+  }
+}
