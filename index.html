@@ -2,10 +2,10 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#eaf7ff">
   <title>Color Restore - Ball Sort Puzzle</title>
-  <link rel="stylesheet" href="./css/style.css?v=20260812-1">
+  <link rel="stylesheet" href="./css/style.css?v=20260812-2">
 </head>
 <body>
   <main id="app">
@@ -23,7 +23,17 @@
     </section>
 
     <section id="game-screen" class="screen">
-      <header class="game-head"><button id="home-btn" class="icon-btn" aria-label="ステージ選択へ">⌂</button><div><small id="world-name">GARDEN</small><b>STAGE <span id="stage-number">1</span></b></div><div class="moves"><small>MOVES</small><b id="move-count">0</b><em id="best-count">BEST —</em></div></header>
+      <header class="game-head">
+        <button id="home-btn" class="icon-btn" aria-label="ステージ選択へ">⌂</button>
+        <div class="game-identity">
+          <small id="world-name">GARDEN</small>
+          <b class="level-progress" aria-label="全30レベル中、現在レベル1">LEVEL <span id="stage-number">1</span> <span aria-hidden="true">/</span> <span id="stage-total">30</span></b>
+        </div>
+        <div class="game-stats">
+          <span class="moves"><small>MOVES</small><b id="move-count">0</b></span>
+          <em id="best-count">BEST —</em>
+        </div>
+      </header>
       <div id="world" class="world garden">
         <div class="sun"></div><div class="cloud c1"></div><div class="cloud c2"></div>
         <div class="scenery" aria-hidden="true"></div><div id="tube-board" class="tube-board" aria-label="ボールソート盤面"></div>
@@ -35,5 +45,5 @@
 
   <div id="clear-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="clear-title"><div class="modal-card"><div class="clear-star">★</div><p>WONDERFUL!</p><h2 id="clear-title">STAGE CLEAR</h2><div class="result"><span>MOVES <b id="result-moves">0</b></span><span>BEST <b id="result-best">0</b></span></div><button id="next-btn" class="primary">NEXT STAGE</button><button id="replay-btn" class="secondary">REPLAY</button><button id="modal-select-btn" class="text-btn">STAGE SELECT</button></div></div>
   <div id="toast" role="status" aria-live="polite"></div><div id="confetti" aria-hidden="true"></div>
-  <script src="./data/stages.js?v=20260812-1"></script><script src="./js/storage.js?v=20260812-1"></script><script src="./js/sound.js?v=20260812-1"></script><script src="./js/game.js?v=20260812-1"></script><script src="./js/hint.js?v=20260812-1"></script><script src="./js/stage.js?v=20260812-1"></script><script src="./js/app.js?v=20260812-1"></script>
+  <script src="./data/stages.js?v=20260812-2"></script><script src="./js/storage.js?v=20260812-2"></script><script src="./js/sound.js?v=20260812-2"></script><script src="./js/game.js?v=20260812-2"></script><script src="./js/hint.js?v=20260812-2"></script><script src="./js/stage.js?v=20260812-2"></script><script src="./js/app.js?v=20260812-2"></script>
 </body></html>
