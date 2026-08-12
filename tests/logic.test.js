@@ -5,7 +5,7 @@ const context={window:{}};vm.createContext(context);vm.runInContext(fs.readFileS
 // same-color run is available or the destination has room for all of it.
 let t=[['blue','red','red','red'],[]];assert(G.isLegalMove(t,0,1,4));assert.equal(G.applyMove(t,0,1,4),1);assert.deepEqual(JSON.parse(JSON.stringify(t)),[['blue','red','red'],['red']]);
 assert.equal(G.applyMove(t,0,1,4),1);assert.deepEqual(JSON.parse(JSON.stringify(t)),[['blue','red'],['red','red']]);
-t=[['red'],['blue']];assert(G.isLegalMove(t,0,1,4));assert.equal(G.applyMove(t,0,1,4),1);assert.deepEqual(JSON.parse(JSON.stringify(t)),[[],['blue','red']]);
+t=[['red'],['blue']];assert(!G.isLegalMove(t,0,1,4));assert.equal(G.applyMove(t,0,1,4),0);assert.deepEqual(JSON.parse(JSON.stringify(t)),[['red'],['blue']]);
 t=[['red'],['red']];assert(G.isLegalMove(t,0,1,4));
 t=[['red'],[]];assert(G.isLegalMove(t,0,1,4));
 t=[['red'],['blue','yellow','green','purple']];assert(!G.isLegalMove(t,0,1,4));
@@ -39,8 +39,9 @@ stages.forEach(stage=>{
 });
 const carefulHint=H.choose([['red','red','red','red'],['blue','red'],[],[]],4);
 assert.notDeepEqual(carefulHint,{from:0,to:2});
-const mixedBoard=[['red'],['blue','blue','blue'],['yellow','yellow','yellow','yellow']];
-const mixedOnlyHint=H.choose(mixedBoard,4);
-assert(G.isLegalMove(mixedBoard,mixedOnlyHint.from,mixedOnlyHint.to,4));
-assert.notEqual(mixedBoard[mixedOnlyHint.from].at(-1),mixedBoard[mixedOnlyHint.to].at(-1));
+const hintBoard=[['red'],['red','red'],['blue'],[]];
+const legalHint=H.choose(hintBoard,4);
+assert(legalHint);assert(G.isLegalMove(hintBoard,legalHint.from,legalHint.to,4));
+const destination=hintBoard[legalHint.to];
+assert(!destination.length||hintBoard[legalHint.from].at(-1)===destination.at(-1));
 console.log('all 30 stages have valid single-ball solution certificates');
