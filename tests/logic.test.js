@@ -27,11 +27,20 @@ t=[['red'],[]];assert(G.isLegalMove(t,0,1,4));
 t=[['red'],['blue','yellow','green','purple']];assert(!G.isLegalMove(t,0,1,4));
 assert(!G.isLegalMove([['red'],[]],0,0,4));assert(!G.isLegalMove([[],['red']],0,1,4));
 assert(G.isCleared([['red','red','red','red'],[]],4));assert(!G.isCleared([['red'],[]],4));assert(H.choose([['red'],['red'],[]],4));
-// Stuck means exactly: the board is not cleared and no from/to pair is legal.
+// The immediate check still catches the certain, zero-legal-move case.
 assert(!G.isStuck([['red','red'],['blue','blue']],2),'cleared boards are never stuck');
 assert(!G.isStuck([['red'],[]],2),'a board with a legal move is not stuck');
 assert(G.isStuck([['red','blue'],['blue','red']],2),'a non-cleared board with no legal move is stuck');
-console.log('single-ball and stuck-state logic tests passed');
+function solve(board,cap,options){const search=G.createSolveSearch(board,cap,options),statuses=[];let result;do{result=search.step(3);statuses.push(result);}while(result==='searching');return {result,search,statuses};}
+const looping=[['b','c','c','d'],['b','a','a','c'],['d','a','c','b'],['d','b','d','a'],[]];
+assert(!G.isStuck(looping,4),'loop-only board still has legal moves');
+assert.equal(solve(looping,4).result,'unsolvable','visited-state exhaustion proves the loop-only board stuck');
+assert.equal(solve([['red','blue'],[],[]],2).result,'unsolvable','moving a ball between empty tubes cannot manufacture a solution');
+assert.equal(solve([['red','blue'],['blue','red'],[]],2).result,'solvable','one clearing route among several moves prevents stuck classification');
+assert.equal(solve([['red','blue'],['blue','red'],[]],2,{maxVisited:1}).result,'solvable','definitive results are cached');
+assert.equal(solve([['x','y'],[],[]],2,{maxVisited:1}).result,'unknown','a search limit is inconclusive, not unsolvable');
+assert.equal(G.stateKey([['red'],[],['blue']],2),G.stateKey([['blue'],['red'],[]],2),'tube permutations normalize to one state');
+console.log('single-ball, exhaustive solver, normalization, cache, and cutoff tests passed');
 
 // The UI stores one pre-move snapshot per operation, so one undo restores one
 // ball and its corresponding Moves increment.
@@ -74,7 +83,10 @@ console.log('all 30 stages have valid single-ball solution certificates');
 assert(html.includes('id="stuck-modal"')&&html.includes('id="stuck-title">STUCK!</h2>'));
 assert(html.includes('id="stuck-undo-btn"')&&html.includes('id="stuck-restart-btn"'));
 const appSource=fs.readFileSync('js/app.js','utf8');
-assert(appSource.includes("function undo(){if(state.isAnimating||state.isCleared||!state.history.length)return;hideStuck();"));
-assert(appSource.includes("function restart(){if(state.isAnimating)return;hideStuck();"));
-assert(appSource.includes("if(state.isStuck||CRGame.isStuck(state.tubes,state.capacity)){showStuck();return;}"));
+assert(html.includes('この状態からはクリアできません'));
+assert(appSource.includes("function undo(){if(state.isAnimating||state.isCleared||!state.history.length)return;cancelSolve();hideStuck();"));
+assert(appSource.includes("function restart(){if(state.isAnimating)return;cancelSolve();hideStuck();"));
+assert(appSource.includes("known==='unsolvable'||CRGame.isStuck(state.tubes,state.capacity)"));
+assert(appSource.includes('solveTimer=setTimeout(slice,0)'),'solver work must yield between short slices');
+assert(appSource.includes("if(result==='unknown'||result==='solvable'||Date.now()-started>=1200)return;"),'limits must leave play running without a false STUCK');
 console.log('stuck recovery and hint UI wiring tests passed');
