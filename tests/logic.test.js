@@ -52,6 +52,7 @@ console.log('single-ball undo snapshot test passed');
 vm.runInContext(fs.readFileSync('data/stages.js','utf8'),context);const stages=context.window.CR_STAGES;
 assert.equal(stages.length,30);
 stages.forEach(stage=>{
+  assert(!G.isCleared(stage.tubes,4),`stage ${stage.id}: initial board must be uncleared`);
   assert(!G.isStuck(stage.tubes,4),`stage ${stage.id}: initial board must not be stuck`);
   const buffers=stage.id<14?2:1;
   assert.equal(stage.tubes.length,stage.colors+buffers,`stage ${stage.id}: tube count`);
@@ -76,6 +77,20 @@ assert(legalHint);assert(G.isLegalMove(hintBoard,legalHint.from,legalHint.to,4))
 const destination=hintBoard[legalHint.to];
 assert(!destination.length||hintBoard[legalHint.from].at(-1)===destination.at(-1));
 console.log('all 30 stages have valid single-ball solution certificates');
+
+// The development analyzer imports production CRGame rather than maintaining
+// another rule implementation. Its exhaustive normalized BFS currently fits
+// below the documented cap for every published level and proves exact minima.
+const analyzer=require('../tools/level-analyzer');
+const analysis=analyzer.analyzeAll({stateLimit:5000});
+assert.equal(analysis.length,30);
+analysis.forEach((result,index)=>{
+  assert(result.solvable,`level ${index+1}: analyzer solvability`);
+  assert(result.sampleExhausted,`level ${index+1}: complete reachable graph`);
+  assert(Number.isInteger(result.shortestMoves)&&result.shortestMoves>0,`level ${index+1}: exact shortest path`);
+  assert(result.shortestMoves<=result.solutionMoves,`level ${index+1}: certificate upper bound`);
+});
+console.log('development analyzer exhausts all 30 normalized reachable graphs');
 
 
 // The accessible stuck dialog provides both recovery actions, and each action
