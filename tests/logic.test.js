@@ -6,15 +6,16 @@ assert(G.isCleared([['red','red','red','red'],[]],4));assert(!G.isCleared([['red
 let state={tubes:[['red'],[]],moveCount:0,history:[]};state.history.push({tubes:G.clone(state.tubes),moveCount:state.moveCount});G.applyMove(state.tubes,0,1,4);state.moveCount++;let prior=state.history.pop();state.tubes=G.clone(prior.tubes);state.moveCount=prior.moveCount;assert.deepEqual(JSON.parse(JSON.stringify(state.tubes)),[['red'],[]]);assert.equal(state.moveCount,0);
 console.log('undo snapshot test passed');
 
-// Every published board has exactly four balls of each color and two working
-// buffers. This guards the curated, solvable stage format against accidental
+// Every published board has exactly four balls of each color. The late game
+// deliberately reduces the two tutorial buffers to one.
 // edits that can make a puzzle impossible.
 vm.runInContext(fs.readFileSync('data/stages.js','utf8'),context);
 const stages=context.window.CR_STAGES;
 assert.equal(stages.length,30);
 stages.forEach(stage=>{
-  assert.equal(stage.tubes.length,stage.colors+2,`stage ${stage.id}: tube count`);
-  assert.equal(stage.tubes.filter(t=>t.length===0).length,2,`stage ${stage.id}: buffers`);
+  const buffers=stage.id<14?2:1;
+  assert.equal(stage.tubes.length,stage.colors+buffers,`stage ${stage.id}: tube count`);
+  assert.equal(stage.tubes.filter(t=>t.length===0).length,buffers,`stage ${stage.id}: buffers`);
   const counts={};stage.tubes.forEach(t=>{assert(t.length<=4);t.forEach(c=>counts[c]=(counts[c]||0)+1);});
   assert.equal(Object.keys(counts).length,stage.colors,`stage ${stage.id}: colors`);
   Object.keys(counts).forEach(c=>assert.equal(counts[c],4,`stage ${stage.id}: ${c} count`));
@@ -37,6 +38,14 @@ function shortestDistance(start){
 // the tutorial; subsequent boards deliberately require substantially more
 // planning than the original 3–12 move layouts.
 stages.slice(0,10).forEach(stage=>assert.equal(shortestDistance(stage.tubes),stage.minimumMoves,`stage ${stage.id}: optimal route`));
+// Solver-produced certificates are shipped as development metadata. Replaying
+// every certificate proves that all single-buffer stages are actually solvable.
+stages.slice(13).forEach(stage=>{
+  const board=stage.tubes.map(t=>t.slice());
+  assert.equal(stage.solution.length,stage.verifiedMoves,`stage ${stage.id}: verified move count`);
+  stage.solution.forEach(([from,to],move)=>assert(G.applyMove(board,from,to,4),`stage ${stage.id}: solution move ${move+1}`));
+  assert(G.isCleared(board,4),`stage ${stage.id}: solver certificate`);
+});
 const carefulHint=H.choose([['red','red','red','red'],['blue','red'],[],[]],4);
 assert.notDeepEqual(carefulHint,{from:0,to:2});
 console.log('30 stage invariants and opening-world difficulty tests passed');
