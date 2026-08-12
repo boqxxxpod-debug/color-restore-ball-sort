@@ -92,6 +92,16 @@ analysis.forEach((result,index)=>{
 });
 console.log('development analyzer exhausts all 30 normalized reachable graphs');
 
+const pipeline=require('../tools/level-pipeline');
+const generatedA=pipeline.randomBoard(4,2,1234), generatedB=pipeline.randomBoard(4,2,1234);
+assert.deepEqual(generatedA,generatedB,'candidate seeds must reproduce the board');
+assert.equal(pipeline.shapeKey([['a','b'],[],['b','a']]),pipeline.shapeKey([['b','a'],['a','b'],[]]),'candidate dedup ignores tube order');
+const found=pipeline.solvePath(G,[['red','blue'],['blue','red'],[]],2,1000);
+assert(found.solution&&found.solution.length,'pipeline solver returns a certificate');
+let generatedBoard=G.clone([['red','blue'],['blue','red'],[]]); found.solution.forEach(([from,to])=>assert.equal(G.applyMove(generatedBoard,from,to,2),1));
+assert(G.isCleared(generatedBoard,2));
+console.log('generator reproducibility, canonical dedup, and solver certificate tests passed');
+
 
 // The accessible stuck dialog provides both recovery actions, and each action
 // is wired to the same undo/restart paths that clear the stuck state first.
