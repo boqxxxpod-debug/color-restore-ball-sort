@@ -1,0 +1,1 @@
+(function(){'use strict';window.CRStage={worldFor:function(id){return id<=10?{key:'garden',name:'GARDEN'}:id<=20?{key:'ocean',name:'OCEAN'}:{key:'city',name:'CITY'};},progress:function(id,cleared){var start=id<=10?1:id<=20?11:21,count=0;cleared.forEach(function(n){if(n>=start&&n<start+10)count++;});return count/10;}};}());
