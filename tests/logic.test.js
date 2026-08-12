@@ -12,6 +12,10 @@ const versions=productionAssets.map(asset=>{
 });
 assert.equal(new Set(versions).size,1,'production assets must share one release version');
 console.log(`all production assets use cache version ${versions[0]}`);
+assert(html.includes('class="level-progress"'),'game header must expose an independent level progress block');
+assert(html.includes('LEVEL <span id="stage-number">1</span>'),'current level must remain visible in the game header');
+assert(html.includes('<span id="stage-total">30</span>'),'total level count must remain visible in the game header');
+assert(!html.includes('user-scalable=no'),'viewport must allow accessibility zoom');
 
 // A legal operation always moves exactly the single top ball, even when a
 // same-color run is available or the destination has room for all of it.
