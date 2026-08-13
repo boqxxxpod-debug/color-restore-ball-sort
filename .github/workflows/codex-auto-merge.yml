@@ -1,0 +1,77 @@
+name: Codex Auto Merge
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled, unlabeled, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: codex-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  enable-auto-merge:
+    if: >-
+      !github.event.pull_request.draft &&
+      startsWith(github.event.pull_request.head.ref, 'codex/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check repository and labels
+        id: eligibility
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$(gh api "repos/$REPO" --jq '.allow_auto_merge')" != 'true' ]; then
+            echo 'Repository auto-merge is disabled; the external orchestrator will stop or use its authenticated fallback.'
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          labels="$(gh api "repos/$REPO/issues/$PR" --jq '[.labels[].name] | join("\n")')"
+
+          if ! grep -Fxq 'codex' <<< "$labels"; then
+            echo 'Codex label is missing; skipping auto-merge.'
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if grep -Fxq 'manual-review' <<< "$labels"; then
+            echo 'manual-review label is present; skipping auto-merge.'
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo 'eligible=true' >> "$GITHUB_OUTPUT"
+
+      - name: Reject infrastructure-sensitive changes
+        id: paths
+        if: steps.eligibility.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          files="$(gh api --paginate "repos/$REPO/pulls/$PR/files?per_page=100" --jq '.[].filename')"
+          printf '%s\n' "$files"
+
+          if grep -Eq '^(\.github/|AGENTS\.md$|STATE\.md$|CODEOWNERS$|package(-lock)?\.json$)' <<< "$files"; then
+            echo 'Infrastructure-sensitive file changed; manual review required.'
+            echo 'safe=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo 'safe=true' >> "$GITHUB_OUTPUT"
+
+      - name: Enable GitHub auto-merge
+        if: steps.eligibility.outputs.eligible == 'true' && steps.paths.outputs.safe == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr merge "$PR" --repo "$REPO" --auto --squash
