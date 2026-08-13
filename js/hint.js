@@ -1,7 +1,6 @@
 (function(){
   'use strict';
-  function colorBreaks(tube){var n=0;for(var i=1;i<tube.length;i++)if(tube[i]!==tube[i-1])n++;return n;}
-  function boardScore(tubes,cap){var score=0,legalMoves=0;tubes.forEach(function(tube){if(!tube.length)return;score-=colorBreaks(tube)*35;if(tube.length===cap&&colorBreaks(tube)===0)score+=500;});for(var f=0;f<tubes.length;f++)for(var t=0;t<tubes.length;t++)if(CRGame.isLegalMove(tubes,f,t,cap))legalMoves++;return score+Math.min(legalMoves,8)*4;}
-  function candidates(tubes,cap){var moves=[];for(var f=0;f<tubes.length;f++)for(var t=0;t<tubes.length;t++){if(!CRGame.isLegalMove(tubes,f,t,cap))continue;var next=CRGame.clone(tubes),targetWasEmpty=!tubes[t].length,sourceWasComplete=tubes[f].length===cap&&colorBreaks(tubes[f])===0;CRGame.applyMove(next,f,t,cap);var score=boardScore(next,cap);if(targetWasEmpty)score-=25;if(sourceWasComplete&&targetWasEmpty)score-=700;moves.push({from:f,to:t,score:score,next:next});}return moves;}
-  window.CRHint={choose:function(tubes,cap){var moves=candidates(tubes,cap);moves.forEach(function(move){var replies=candidates(move.next,cap),best=-Infinity;replies.forEach(function(reply){if(reply.from===move.to&&reply.to===move.from)return;best=Math.max(best,reply.score);});move.score+=(best===-Infinity?-1000:best*.45);});moves.sort(function(a,b){return b.score-a.score;});return moves.length?{from:moves[0].from,to:moves[0].to}:null;}};
+  function search(tubes,cap,options){return CRGame.createHintSearch(tubes,cap,options);}
+  function choose(tubes,cap){var job=search(tubes,cap),result;do{result=job.step(1000);}while(result.status==='searching');return result.status==='solved'?result.move:null;}
+  window.CRHint={search:search,choose:choose};
 }());
