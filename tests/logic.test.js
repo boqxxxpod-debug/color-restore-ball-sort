@@ -4,7 +4,7 @@ const context={window:{}};vm.createContext(context);vm.runInContext(fs.readFileS
 // Every production asset uses one release identifier so a new Pages deploy
 // cannot combine stale game logic with a fresh UI (or vice versa).
 const html=fs.readFileSync('index.html','utf8');
-const productionAssets=['css/style.css','data/stages.js','js/storage.js','js/sound.js','js/game.js','js/hint.js','js/stage.js','js/app.js'];
+const productionAssets=['css/style.css','data/stages.js','js/storage.js','js/sound.js','js/game.js','js/hint.js','js/stage.js','js/lifecycle.js','js/app.js'];
 const versions=productionAssets.map(asset=>{
   const match=html.match(new RegExp(asset.replaceAll('.','\\.')+'\\?v=([^"\\s]+)'));
   assert(match,`${asset}: missing cache-busting version`);
@@ -109,9 +109,24 @@ assert(html.includes('id="stuck-modal"')&&html.includes('id="stuck-title">STUCK!
 assert(html.includes('id="stuck-undo-btn"')&&html.includes('id="stuck-restart-btn"'));
 const appSource=fs.readFileSync('js/app.js','utf8');
 assert(html.includes('この状態からはクリアできません'));
-assert(appSource.includes("function undo(){if(state.isAnimating||state.isCleared||!state.history.length)return;cancelSolve();hideStuck();"));
-assert(appSource.includes("function restart(){if(state.isAnimating)return;cancelSolve();hideStuck();"));
+assert(appSource.includes('function tapTube(i){if(modalOpen()||state.isAnimating||state.isCleared)return;'),'modal state must guard pointer and keyboard tube activation');
+assert(appSource.includes('function leaveGame(){lifecycle.leave();cancelSolve();closeModal(false);'),'all transitions share cleanup');
 assert(appSource.includes("known==='unsolvable'||CRGame.isStuck(state.tubes,state.capacity)"));
 assert(appSource.includes('solveTimer=setTimeout(slice,0)'),'solver work must yield between short slices');
 assert(appSource.includes("if(result==='unknown'||result==='solvable'||Date.now()-started>=1200)return;"),'limits must leave play running without a false STUCK');
 console.log('stuck recovery and hint UI wiring tests passed');
+
+// Fake timers prove callbacks from an old generation cannot affect a new screen.
+const lifecycleContext={};vm.createContext(lifecycleContext);vm.runInContext(fs.readFileSync('js/lifecycle.js','utf8'),lifecycleContext);
+let now=0,nextTimer=1,queue=new Map();
+const fakeClock={setTimeout(fn,delay){const id=nextTimer++;queue.set(id,{at:now+delay,fn});return id;},clearTimeout(id){queue.delete(id);}};
+function advance(ms){const end=now+ms;while(true){let chosen=null;queue.forEach((timer,id)=>{if(timer.at<=end&&(!chosen||timer.at<chosen.timer.at))chosen={id,timer};});if(!chosen)break;queue.delete(chosen.id);now=chosen.timer.at;chosen.timer.fn();}now=end;}
+const life=lifecycleContext.CRLifecycle.create(fakeClock);let opened=0,hinted=0;
+life.schedule('clear-modal',()=>opened++,850);life.schedule('hint-end',()=>hinted++,650);advance(300);life.leave();advance(1000);
+assert.equal(opened,0,'home 300ms after the final move suppresses old CLEAR after 850ms');assert.equal(hinted,0,'leave suppresses old HINT callbacks');assert.deepEqual(life.pending(),[]);
+life.schedule('clear-modal',()=>opened++,850);advance(300);life.leave();advance(1000);assert.equal(opened,0,'restart suppresses old CLEAR');
+life.schedule('clear-modal',()=>opened++,850);advance(300);life.leave();life.schedule('clear-modal',()=>opened++,850);advance(549);assert.equal(opened,0,'another stage cannot receive the old callback');advance(301);assert.equal(opened,1,'only the new session callback runs once');
+assert(html.includes('<dialog id="stuck-modal"')&&html.includes('<dialog id="clear-modal"'),'STUCK and CLEAR use native modal dialogs');
+assert(appSource.includes("modal.addEventListener('cancel',function(e){e.preventDefault();});"),'Escape cannot desynchronize dialog DOM and state');
+['modal-select-btn','next-btn','replay-btn','home-btn','play-btn','select-btn'].forEach(id=>assert(appSource.includes("$('#"+id+"').onclick"),id+' transition wiring'));
+console.log('modal lifecycle fake-timer and transition regression tests passed');

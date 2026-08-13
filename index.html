@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#eaf7ff">
   <title>Color Restore - Ball Sort Puzzle</title>
-  <link rel="stylesheet" href="./css/style.css?v=20260812-4">
+  <link rel="stylesheet" href="./css/style.css?v=20260813-1">
 </head>
 <body>
   <main id="app">
@@ -43,8 +43,8 @@
     </section>
   </main>
 
-  <div id="stuck-modal" class="modal stuck-modal" role="alertdialog" aria-modal="true" aria-labelledby="stuck-title"><div class="modal-card"><div class="stuck-mark" aria-hidden="true">!</div><p>NO SOLUTION</p><h2 id="stuck-title">STUCK!</h2><p class="stuck-help">この状態からはクリアできません<br>UNDO または RESTART してください</p><button id="stuck-undo-btn" class="primary">UNDO</button><button id="stuck-restart-btn" class="secondary">RESTART</button></div></div>
-  <div id="clear-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="clear-title"><div class="modal-card"><div class="clear-star">★</div><p>WONDERFUL!</p><h2 id="clear-title">STAGE CLEAR</h2><div class="result"><span>MOVES <b id="result-moves">0</b></span><span>BEST <b id="result-best">0</b></span></div><button id="next-btn" class="primary">NEXT STAGE</button><button id="replay-btn" class="secondary">REPLAY</button><button id="modal-select-btn" class="text-btn">STAGE SELECT</button></div></div>
+  <dialog id="stuck-modal" class="modal stuck-modal" aria-labelledby="stuck-title"><div class="modal-card"><div class="stuck-mark" aria-hidden="true">!</div><p>NO SOLUTION</p><h2 id="stuck-title">STUCK!</h2><p class="stuck-help">この状態からはクリアできません<br>UNDO または RESTART してください</p><button id="stuck-undo-btn" class="primary">UNDO</button><button id="stuck-restart-btn" class="secondary">RESTART</button></div></dialog>
+  <dialog id="clear-modal" class="modal" aria-labelledby="clear-title"><div class="modal-card"><div class="clear-star">★</div><p>WONDERFUL!</p><h2 id="clear-title">STAGE CLEAR</h2><div class="result"><span>MOVES <b id="result-moves">0</b></span><span>BEST <b id="result-best">0</b></span></div><button id="next-btn" class="primary">NEXT STAGE</button><button id="replay-btn" class="secondary">REPLAY</button><button id="modal-select-btn" class="text-btn">STAGE SELECT</button></div></dialog>
   <div id="toast" role="status" aria-live="polite"></div><div id="confetti" aria-hidden="true"></div>
-  <script src="./data/stages.js?v=20260812-4"></script><script src="./js/storage.js?v=20260812-4"></script><script src="./js/sound.js?v=20260812-4"></script><script src="./js/game.js?v=20260812-4"></script><script src="./js/hint.js?v=20260812-4"></script><script src="./js/stage.js?v=20260812-4"></script><script src="./js/app.js?v=20260812-4"></script>
+  <script src="./data/stages.js?v=20260813-1"></script><script src="./js/storage.js?v=20260813-1"></script><script src="./js/sound.js?v=20260813-1"></script><script src="./js/game.js?v=20260813-1"></script><script src="./js/hint.js?v=20260813-1"></script><script src="./js/stage.js?v=20260813-1"></script><script src="./js/lifecycle.js?v=20260813-1"></script><script src="./js/app.js?v=20260813-1"></script>
 </body></html>
