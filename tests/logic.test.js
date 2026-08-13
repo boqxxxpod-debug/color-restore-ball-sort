@@ -26,7 +26,7 @@ t=[['red'],['red']];assert(G.isLegalMove(t,0,1,4));
 t=[['red'],[]];assert(G.isLegalMove(t,0,1,4));
 t=[['red'],['blue','yellow','green','purple']];assert(!G.isLegalMove(t,0,1,4));
 assert(!G.isLegalMove([['red'],[]],0,0,4));assert(!G.isLegalMove([[],['red']],0,1,4));
-assert(G.isCleared([['red','red','red','red'],[]],4));assert(!G.isCleared([['red'],[]],4));assert(H.choose([['red'],['red'],[]],4));
+assert(G.isCleared([['red','red','red','red'],[]],4));assert(!G.isCleared([['red'],[]],4));assert(H.choose([['red'],['red'],[]],2));
 // The immediate check still catches the certain, zero-legal-move case.
 assert(!G.isStuck([['red','red'],['blue','blue']],2),'cleared boards are never stuck');
 assert(!G.isStuck([['red'],[]],2),'a board with a legal move is not stuck');
@@ -71,7 +71,7 @@ stages.forEach(stage=>{
 });
 const carefulHint=H.choose([['red','red','red','red'],['blue','red'],[],[]],4);
 assert.notDeepEqual(carefulHint,{from:0,to:2});
-const hintBoard=[['red'],['red','red'],['blue'],[]];
+const hintBoard=stages[0].tubes.map(t=>t.slice());
 const legalHint=H.choose(hintBoard,4);
 assert(legalHint);assert(G.isLegalMove(hintBoard,legalHint.from,legalHint.to,4));
 const destination=hintBoard[legalHint.to];
@@ -109,9 +109,10 @@ assert(html.includes('id="stuck-modal"')&&html.includes('id="stuck-title">STUCK!
 assert(html.includes('id="stuck-undo-btn"')&&html.includes('id="stuck-restart-btn"'));
 const appSource=fs.readFileSync('js/app.js','utf8');
 assert(html.includes('この状態からはクリアできません'));
-assert(appSource.includes("function undo(){if(state.isAnimating||state.isCleared||!state.history.length)return;cancelSolve();hideStuck();"));
-assert(appSource.includes("function restart(){if(state.isAnimating)return;cancelSolve();hideStuck();"));
-assert(appSource.includes("known==='unsolvable'||CRGame.isStuck(state.tubes,state.capacity)"));
+assert(appSource.includes("function undo(){if(state.isAnimating||state.isCleared||!state.history.length)return;cancelWork();hideStuck();"));
+assert(appSource.includes("function restart(){if(state.isAnimating)return;cancelWork();hideStuck();"));
+assert(appSource.includes("var previous=state.selectedTube;state.selectedTube=null;updateSelection(previous)"));
+assert(appSource.includes("toast('HINTを計算できません')"));
 assert(appSource.includes('solveTimer=setTimeout(slice,0)'),'solver work must yield between short slices');
 assert(appSource.includes("if(result==='unknown'||result==='solvable'||Date.now()-started>=1200)return;"),'limits must leave play running without a false STUCK');
 console.log('stuck recovery and hint UI wiring tests passed');

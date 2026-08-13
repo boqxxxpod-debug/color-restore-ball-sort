@@ -46,5 +46,28 @@
     return {step:step,key:startKey,get visited(){return visited.size;}};
   }
   function cachedSolvability(tubes,cap){return solveCache.get(stateKey(tubes,cap))||null;}
-  window.CRGame={clone:clone,topRun:topRun,isLegalMove:legal,applyMove:move,isCleared:cleared,isStuck:stuck,stateKey:stateKey,createSolveSearch:createSolveSearch,cachedSolvability:cachedSolvability};
+  // The hint search shares the production legality and move implementation
+  // with the stuck solver. Stable from/to iteration breaks shortest-path ties.
+  function createHintSearch(tubes,cap,options){
+    options=options||{};var start=clone(tubes),queue=[{board:start,first:null,depth:0}],cursor=0,visited=new Set([stateKey(start,cap)]),maxVisited=options.maxVisited||50000,finished=null;
+    function step(budget){
+      if(finished)return finished;budget=Math.max(1,budget||250);
+      while(cursor<queue.length&&budget--){
+        var node=queue[cursor++];
+        if(cleared(node.board,cap)){finished={status:'solved',move:node.first,distance:node.depth,visited:visited.size};return finished;}
+        var equivalent={};
+        for(var from=0;from<node.board.length;from++)for(var to=0;to<node.board.length;to++){
+          if(!legal(node.board,from,to,cap))continue;
+          var signature=node.board[from].join(',')+'>'+node.board[to].join(',');if(equivalent[signature])continue;equivalent[signature]=1;
+          var next=clone(node.board);move(next,from,to,cap);var key=stateKey(next,cap);if(visited.has(key))continue;
+          if(visited.size>=maxVisited){finished={status:'unknown',move:null,distance:null,visited:visited.size};return finished;}
+          visited.add(key);queue.push({board:next,first:node.first||{from:from,to:to},depth:node.depth+1});
+        }
+      }
+      if(cursor>=queue.length){finished={status:'unsolvable',move:null,distance:null,visited:visited.size};return finished;}
+      return {status:'searching',move:null,distance:null,visited:visited.size};
+    }
+    return {step:step,key:stateKey(start,cap),get visited(){return visited.size;}};
+  }
+  window.CRGame={clone:clone,topRun:topRun,isLegalMove:legal,applyMove:move,isCleared:cleared,isStuck:stuck,stateKey:stateKey,createSolveSearch:createSolveSearch,createHintSearch:createHintSearch,cachedSolvability:cachedSolvability};
 }());
