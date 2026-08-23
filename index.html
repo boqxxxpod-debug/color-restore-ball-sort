@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#eaf7ff">
   <title>Color Restore - Ball Sort Puzzle</title>
-  <link rel="stylesheet" href="./css/style.css?v=20260813-1">
+  <link rel="stylesheet" href="./css/style.css?v=20260823-1">
 </head>
 <body>
   <main id="app">
@@ -27,11 +27,13 @@
         <button id="home-btn" class="icon-btn" aria-label="ステージ選択へ">⌂</button>
         <div class="game-identity">
           <small id="world-name">GARDEN</small>
-          <b class="level-progress" aria-label="全30レベル中、現在レベル1">LEVEL <span id="stage-number">1</span> <span aria-hidden="true">/</span> <span id="stage-total">30</span></b>
+          <b class="level-progress" aria-label="全55レベル中、現在レベル1">LEVEL <span id="stage-number">1</span> <span aria-hidden="true">/</span> <span id="stage-total">55</span></b>
         </div>
         <div class="game-stats">
           <span class="moves"><small>MOVES</small><b id="move-count">0</b></span>
           <em id="best-count">BEST —</em>
+          <em id="limit-count" class="limit-count hidden"></em>
+          <em id="rule-chip" class="rule-chip"></em>
         </div>
       </header>
       <div id="world" class="world garden">
@@ -44,7 +46,8 @@
   </main>
 
   <div id="stuck-modal" class="modal stuck-modal" role="alertdialog" aria-modal="true" aria-labelledby="stuck-title"><div class="modal-card"><div class="stuck-mark" aria-hidden="true">!</div><p>NO SOLUTION</p><h2 id="stuck-title">STUCK!</h2><p class="stuck-help">この状態からはクリアできません<br>UNDO または RESTART してください</p><button id="stuck-undo-btn" class="primary">UNDO</button><button id="stuck-restart-btn" class="secondary">RESTART</button></div></div>
+  <div id="limit-modal" class="modal limit-modal" role="alertdialog" aria-modal="true" aria-labelledby="limit-title"><div class="modal-card"><div class="limit-mark" aria-hidden="true">⏱</div><p>MOVE LIMIT</p><h2 id="limit-title">手数オーバー</h2><p class="stuck-help">規定手数に達しました<br>UNDO または RESTART してください</p><button id="limit-undo-btn" class="primary">UNDO</button><button id="limit-restart-btn" class="secondary">RESTART</button></div></div>
   <div id="clear-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="clear-title"><div class="modal-card"><div class="clear-star">★</div><p>WONDERFUL!</p><h2 id="clear-title">STAGE CLEAR</h2><div class="result"><span>MOVES <b id="result-moves">0</b></span><span>BEST <b id="result-best">0</b></span></div><button id="next-btn" class="primary">NEXT STAGE</button><button id="replay-btn" class="secondary">REPLAY</button><button id="modal-select-btn" class="text-btn">STAGE SELECT</button></div></div>
   <div id="toast" role="status" aria-live="polite"></div><div id="confetti" aria-hidden="true"></div>
-  <script src="./data/stages.js?v=20260813-1"></script><script src="./js/storage.js?v=20260813-1"></script><script src="./js/sound.js?v=20260813-1"></script><script src="./js/game.js?v=20260813-1"></script><script src="./js/hint.js?v=20260813-1"></script><script src="./js/stage.js?v=20260813-1"></script><script src="./js/app.js?v=20260813-1"></script>
+  <script src="./data/stages.js?v=20260823-1"></script><script src="./data/advanced-stages.js?v=20260823-1"></script><script src="./js/storage.js?v=20260823-1"></script><script src="./js/sound.js?v=20260823-1"></script><script src="./js/game.js?v=20260823-1"></script><script src="./js/hint.js?v=20260823-1"></script><script src="./js/stage.js?v=20260823-1"></script><script src="./js/app.js?v=20260823-1"></script>
 </body></html>

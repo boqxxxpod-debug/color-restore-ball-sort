@@ -8,3 +8,30 @@
 @media(max-width:260px){.game-head{grid-template-columns:1fr;padding-top:52px;position:relative}.game-head .icon-btn{position:absolute;top:0;left:0}.game-identity{padding-right:0}.level-progress{word-break:keep-all}.game-stats{grid-column:1}}
 
 .stuck-modal{background:#17233bcf}.stuck-modal .modal-card{border:3px solid #ff6577;box-shadow:0 20px 55px #111a2f80}.stuck-modal h2{color:#d93450;font-size:clamp(36px,12vw,52px);letter-spacing:2px}.stuck-mark{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 8px;border-radius:50%;background:#ff5d73;color:white;font-size:40px;font-weight:950}.modal-card .stuck-help{margin:14px 0 18px;color:var(--ink);font-size:14px;line-height:1.7;letter-spacing:0;font-weight:700}.stuck-modal button{display:block;margin:8px auto}
+
+/* Advanced worlds and five-ball tubes keep the ball diameter unchanged. */
+.world.aurora{background:linear-gradient(#394b91 0 45%,#7b4fa3 45% 68%,#263d69 68%)}
+.aurora .sun{background:#e9f5ff;box-shadow:0 0 35px #c4e9ff}
+.aurora .scenery{height:40%;background:linear-gradient(135deg,transparent 0 15%,#8ff5dc66 16% 20%,transparent 21% 34%,#d98fff66 35% 40%,transparent 41%)}
+.tube-board.capacity-5{inset:8% 8px 3%;gap:12px 9px}
+.tube.capacity-5{height:189px}
+@media(max-width:370px){.tube-board.capacity-5{gap:10px 5px}.tube.capacity-5{height:174px}}
+
+.world.crystal{background:linear-gradient(#8fd9ff 0 42%,#8767ca 42% 68%,#3b316e 68%)}
+.crystal .sun{background:#fff6c9;box-shadow:0 0 32px #fff}
+.crystal .scenery{height:48%;background:linear-gradient(65deg,transparent 0 12%,#dcf8ff88 13% 18%,transparent 19% 33%,#bfa5ff88 34% 43%,transparent 44% 62%,#9fffe288 63% 71%,transparent 72%)}
+.hidden{display:none!important}
+.rule-chip{flex-basis:100%;min-height:20px;padding:4px 10px;border-radius:999px;background:#fff9;color:#3f5674!important;font-size:10px!important;letter-spacing:.3px}
+.rule-chip:empty{display:none}.limit-count{color:#d63855!important;font-size:12px!important}
+.tube.locked-tube{filter:grayscale(.75);opacity:.72;background:repeating-linear-gradient(135deg,#8ca0b755 0 7px,#e6eef755 7px 14px)}
+.tube.locked-tube:before{background:#7d8da6;border-color:#d7e0eb}
+.lock-badge{position:absolute;z-index:4;top:48%;left:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#22314bd9;color:#fff;font-size:21px;box-shadow:0 5px 12px #1a294b66;pointer-events:none}
+.tube.unlocked-tube .lock-badge{top:-18px;left:auto;right:-10px;transform:none;width:25px;height:25px;background:#2aae84;font-size:13px}
+.target-marker{position:absolute;z-index:4;top:-24px;left:50%;transform:translateX(-50%);color:var(--target-color);font-size:24px;font-weight:950;line-height:1;text-shadow:0 1px 3px #fff,0 0 5px #fff;pointer-events:none}
+.tube.target-tube{box-shadow:inset 0 0 0 3px var(--target-color),inset 0 0 10px #49728c25,0 7px 9px #244e6a2b}
+.target-red{--target-color:#e9425b}.target-blue{--target-color:#376ee0}.target-yellow{--target-color:#c59813}.target-green{--target-color:#159b70}.target-purple{--target-color:#7546b8}.target-orange{--target-color:#d87124}.target-cyan{--target-color:#169daf}.target-pink{--target-color:#cf4c8d}
+.limit-modal{background:#342044c9}.limit-modal .modal-card{border:3px solid #f0a33c}.limit-modal h2{color:#b76412}.limit-mark{display:grid;place-items:center;width:62px;height:62px;margin:0 auto 8px;border-radius:50%;background:#f0a33c;color:#fff;font-size:34px}.limit-modal button{display:block;margin:8px auto}
+.world.challenge{background:linear-gradient(#171d46 0 54%,#4a245f 54% 72%,#17142f 72%)}
+.challenge .sun{background:#ffbd4a;box-shadow:0 0 42px #ff8b42}
+.challenge .cloud{opacity:.25}.challenge .scenery{height:46%;background:radial-gradient(circle at 15% 30%,#fff 0 2px,transparent 3px),radial-gradient(circle at 68% 18%,#fff 0 2px,transparent 3px),radial-gradient(circle at 82% 55%,#ffc96b 0 3px,transparent 4px);background-size:90px 80px,120px 105px,145px 115px}
+.world-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
