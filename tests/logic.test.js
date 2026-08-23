@@ -4,7 +4,7 @@ const context={window:{}};vm.createContext(context);vm.runInContext(fs.readFileS
 // Every production asset uses one release identifier so a new Pages deploy
 // cannot combine stale game logic with a fresh UI (or vice versa).
 const html=fs.readFileSync('index.html','utf8');
-const productionAssets=['css/style.css','data/stages.js','js/storage.js','js/sound.js','js/game.js','js/hint.js','js/stage.js','js/app.js'];
+const productionAssets=['css/style.css','data/stages.js','data/advanced-stages.js','js/storage.js','js/sound.js','js/game.js','js/hint.js','js/stage.js','js/app.js'];
 const versions=productionAssets.map(asset=>{
   const match=html.match(new RegExp(asset.replaceAll('.','\\.')+'\\?v=([^"\\s]+)'));
   assert(match,`${asset}: missing cache-busting version`);
@@ -14,7 +14,7 @@ assert.equal(new Set(versions).size,1,'production assets must share one release 
 console.log(`all production assets use cache version ${versions[0]}`);
 assert(html.includes('class="level-progress"'),'game header must expose an independent level progress block');
 assert(html.includes('LEVEL <span id="stage-number">1</span>'),'current level must remain visible in the game header');
-assert(html.includes('<span id="stage-total">30</span>'),'total level count must remain visible in the game header');
+assert(html.includes('<span id="stage-total">55</span>'),'total level count must remain visible in the game header');
 assert(!html.includes('user-scalable=no'),'viewport must allow accessibility zoom');
 
 // A legal operation always moves exactly the single top ball, even when a
