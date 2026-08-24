@@ -6,7 +6,7 @@
 
   // Levels 1-30 are ordered by the existing Analyzer Difficulty Score.
   // Levels 31-35 share the same 8-color/one-empty rules, so order them by
-  // verified solution length, then by initial branching for the 46-move tie.
+  // verified solution length, then by top-color alignment for the 46-move tie.
   // Levels 36-55 already increase a concrete constraint every stage inside
   // their mechanic family (capacity puzzle length, lock puzzle length,
   // target count, then exact minimum / move-limit pressure).
