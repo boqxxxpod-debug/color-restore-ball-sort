@@ -24,21 +24,19 @@ for(let i=1;i<30;i++){
 }
 assert(maxPlateau<=3,'no long flat Analyzer plateau remains in levels 1-30');
 
-function initialLegalMoves(stage){
-  const board=G.clone(stage.tubes),capacity=stage.capacity||4,rules=stage.rules||{},ruleState=G.createRuleState(board,capacity,rules);
-  let count=0;
-  for(let from=0;from<board.length;from++)for(let to=0;to<board.length;to++){
-    if(from!==to&&G.isLegalMove(board,from,to,capacity,rules,ruleState))count++;
-  }
-  return count;
+function topColorPairCount(stage){
+  const counts={};
+  stage.tubes.forEach(tube=>{if(tube.length){const top=tube[tube.length-1];counts[top]=(counts[top]||0)+1;}});
+  return Object.values(counts).reduce((pairs,count)=>pairs+(count*(count-1)/2),0);
 }
 
 // 31-35 were the remaining flat five-stage block. They now rise by verified
-// solution length, with initial branching breaking the final 46-move tie.
+// solution length. For the final 46-move tie, fewer already-aligned top-color
+// pairs means less immediately favorable structure, so that board comes later.
 for(let i=31;i<35;i++){
   const previous=stages[i-1],current=stages[i];
   const longer=current.verifiedMoves>previous.verifiedMoves;
-  const harderTie=current.verifiedMoves===previous.verifiedMoves&&initialLegalMoves(current)>initialLegalMoves(previous);
+  const harderTie=current.verifiedMoves===previous.verifiedMoves&&topColorPairCount(current)<topColorPairCount(previous);
   assert(longer||harderTie,`level ${i+1}: master difficulty rises from the previous level`);
 }
 
