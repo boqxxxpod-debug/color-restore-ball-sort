@@ -1,8 +1,9 @@
 (function () {
   'use strict';
   var KEY = 'colorRestoreSave';
-  var PROGRESSION_VERSION = 2;
-  var REBALANCED_THROUGH = 35;
+  var PROGRESSION_VERSION = 3;
+  var V2_REBALANCED_THROUGH = 35;
+  var V3_CHANGED = {15:1,26:1,27:1,28:1,29:1,30:1,31:1,32:1,33:1,34:1,35:1};
   var defaults = { unlockedStage: 1, clearedStages: [], bestMoves: {}, sound: true, vibration: true, tutorialCompleted: false, progressionVersion: PROGRESSION_VERSION };
   function maxStage() { return window.CR_STAGES && window.CR_STAGES.length ? window.CR_STAGES.length : 30; }
   function fresh() { return JSON.parse(JSON.stringify(defaults)); }
@@ -11,7 +12,12 @@
     if (rawVersion === PROGRESSION_VERSION) return rawBest;
     return Object.keys(rawBest).reduce(function(out, key) {
       var stage = Number(key);
-      if (Number.isInteger(stage) && stage > REBALANCED_THROUGH && stage <= max) out[key] = rawBest[key];
+      if (!Number.isInteger(stage) || stage < 1 || stage > max) return out;
+      if (rawVersion === 2) {
+        if (!V3_CHANGED[stage]) out[key] = rawBest[key];
+      } else if (stage > V2_REBALANCED_THROUGH) {
+        out[key] = rawBest[key];
+      }
       return out;
     }, {});
   }
