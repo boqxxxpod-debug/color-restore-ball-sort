@@ -40,6 +40,17 @@ for(let level=26;level<=35;level++){
   assert(stage.generatedSeed,`level ${level}: generated board seed is recorded`);
 }
 
+// Re-run the production Hint BFS for every regenerated board. This proves that
+// minimumMoves is the exact shortest distance, not just the certificate length.
+[15,26,27,28,29,30,31,32,33,34,35].forEach(level=>{
+  const stage=stages[level-1],capacity=stage.capacity||4;
+  const search=G.createHintSearch(stage.tubes,capacity,{maxVisited:50000});
+  let result;
+  do { result=search.step(10000); } while(result.status==='searching');
+  assert.equal(result.status,'solved',`level ${level}: shortest-path search completes`);
+  assert.equal(result.distance,stage.minimumMoves,`level ${level}: exact minimum is production-BFS verified`);
+});
+
 // The remaining transitions each introduce or strengthen one concrete
 // gameplay pressure, so every transition 1->2 through 54->55 is covered.
 assert.equal(stages[35].capacity,5,'level 36 is harder by introducing five-ball tubes');
