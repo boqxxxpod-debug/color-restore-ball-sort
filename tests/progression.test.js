@@ -12,55 +12,57 @@ stages.forEach((stage,index)=>{
   assert.equal(stage.id,index+1,`level ${index+1}: id is contiguous`);
   assert.equal(stage.progressionRank,index+1,`level ${index+1}: progression rank is contiguous`);
 });
-assert.equal(new Set(stages.map(stage=>stage.sourceId)).size,55,'every verified source board is used exactly once');
+assert.equal(new Set(stages.map(stage=>stage.sourceId)).size,55,'every verified source slot is used exactly once');
 
-// Levels 1-30 follow the existing Analyzer curve instead of the old coarse blocks.
-let plateau=1,maxPlateau=1;
-for(let i=1;i<30;i++){
+// Levels 1-35 now have a strict measured Analyzer increase. This removes all
+// plateaus instead of merely limiting their length.
+for(let i=1;i<35;i++){
   const previous=stages[i-1].analyzerDifficultyScore,current=stages[i].analyzerDifficultyScore;
-  assert(current>=previous,`level ${i+1}: analyzer score does not fall (${previous} -> ${current})`);
-  plateau=current===previous?plateau+1:1;
-  maxPlateau=Math.max(maxPlateau,plateau);
-}
-assert(maxPlateau<=3,'no long flat Analyzer plateau remains in levels 1-30');
-
-function topColorPairCount(stage){
-  const counts={};
-  stage.tubes.forEach(tube=>{if(tube.length){const top=tube[tube.length-1];counts[top]=(counts[top]||0)+1;}});
-  return Object.values(counts).reduce((pairs,count)=>pairs+(count*(count-1)/2),0);
+  assert(Number.isFinite(previous)&&Number.isFinite(current),`level ${i+1}: Analyzer scores are present`);
+  assert(current>previous,`level ${i+1}: Analyzer score strictly rises (${previous} -> ${current})`);
 }
 
-// 31-35 were the remaining flat five-stage block. They now rise by verified
-// solution length. For the final 46-move tie, fewer already-aligned top-color
-// pairs means less immediately favorable structure, so that board comes later.
-for(let i=31;i<35;i++){
-  const previous=stages[i-1],current=stages[i];
-  const longer=current.verifiedMoves>previous.verifiedMoves;
-  const harderTie=current.verifiedMoves===previous.verifiedMoves&&topColorPairCount(current)<topColorPairCount(previous);
-  assert(longer||harderTie,`level ${i+1}: master difficulty rises from the previous level`);
+// Level 15 replaces the last 6-color plateau with a verified board between
+// the surrounding Analyzer scores.
+assert.equal(stages[14].minimumMoves,27,'level 15 exact minimum remains 27 moves');
+assert.equal(stages[14].analyzerDifficultyScore,57,'level 15 breaks the old 56.7 plateau');
+assert(stages[14].generatedSeed,'level 15 records its generated board seed');
+
+// Levels 26-35 are a continuous 8-color / one-empty run with exact minimum
+// distance increasing by one move every level: 34,35,...,43.
+for(let level=26;level<=35;level++){
+  const stage=stages[level-1];
+  assert.equal(stage.colors,8,`level ${level}: eight colors`);
+  assert.equal(stage.capacity,4,`level ${level}: standard four-ball capacity`);
+  assert.equal(stage.tubes.filter(tube=>!tube.length).length,1,`level ${level}: exactly one empty tube`);
+  assert.equal(stage.minimumMoves,level+8,`level ${level}: exact minimum is ${level+8}`);
+  assert.equal(stage.verifiedMoves,stage.minimumMoves,`level ${level}: published certificate is shortest`);
+  assert(stage.generatedSeed,`level ${level}: generated board seed is recorded`);
 }
 
-// Existing advanced families already have a real per-stage pressure increase.
+// The remaining transitions each introduce or strengthen one concrete
+// gameplay pressure, so every transition 1->2 through 54->55 is covered.
+assert.equal(stages[35].capacity,5,'level 36 is harder by introducing five-ball tubes');
 for(let i=36;i<40;i++)assert(stages[i].verifiedMoves>stages[i-1].verifiedMoves,`level ${i+1}: tower solution length rises`);
+
+assert(stages[40].rules&&stages[40].rules.lockedTubes,'level 41 is harder by introducing the lock constraint');
 for(let i=41;i<45;i++)assert(stages[i].verifiedMoves>stages[i-1].verifiedMoves,`level ${i+1}: locked solution length rises`);
+
+assert(stages[45].rules&&stages[45].rules.targets,'level 46 is harder by introducing target placement');
 for(let i=46;i<50;i++){
   const previous=Object.keys(stages[i-1].rules.targets).length,current=Object.keys(stages[i].rules.targets).length;
   assert.equal(current,previous+1,`level ${i+1}: one more target tube is required`);
 }
+
+assert(stages[50].moveLimit,'level 51 is harder by introducing the exact challenge limit');
 for(let i=51;i<55;i++){
   const previous=stages[i-1],current=stages[i];
   assert(current.minimumMoves>previous.minimumMoves,`level ${i+1}: exact minimum rises`);
   assert(current.moveLimit-current.minimumMoves<previous.moveLimit-previous.minimumMoves,`level ${i+1}: move allowance tightens`);
 }
 
-// Boundary stages introduce a new concrete difficulty dimension rather than a
-// five-level-only numerical jump.
-assert.equal(stages[35].capacity,5,'level 36 introduces five-ball tubes');
-assert(stages[40].rules&&stages[40].rules.lockedTubes,'level 41 introduces the lock constraint');
-assert(stages[45].rules&&stages[45].rules.targets,'level 46 introduces target placement');
-assert(stages[50].moveLimit,'level 51 introduces the exact challenge limit');
-
-// Reordering must not invalidate any of the already verified solutions.
+// Every runtime board, including the replacements, must still replay a legal
+// production-rules certificate and clear.
 stages.forEach(stage=>{
   const capacity=stage.capacity||4,rules=stage.rules||{},board=G.clone(stage.tubes),ruleState=G.createRuleState(board,capacity,rules);
   assert.equal(stage.solution.length,stage.verifiedMoves,`level ${stage.id}: certificate length remains valid`);
@@ -68,17 +70,30 @@ stages.forEach(stage=>{
   assert(G.isCleared(board,capacity,rules),`level ${stage.id}: certificate still clears`);
 });
 
-// Existing progress is kept, but stale BEST records for rebalanced levels are
-// removed so old puzzle scores are not shown against a different board.
-const saved={unlockedStage:40,clearedStages:Array.from({length:39},(_,i)=>i+1),bestMoves:{'10':15,'35':43,'36':36,'40':62},sound:true,vibration:true,tutorialCompleted:true};
-const storageContext={window:{CR_STAGES:stages},localStorage:{getItem:()=>JSON.stringify(saved),setItem:()=>{}}};vm.createContext(storageContext);vm.runInContext(fs.readFileSync('js/storage.js','utf8'),storageContext,{filename:'js/storage.js'});
-const migrated=storageContext.window.CRStorage.load();
-assert.equal(migrated.unlockedStage,40,'unlocked progress is preserved');
-assert.equal(migrated.clearedStages.length,39,'cleared progress is preserved');
-assert.equal(migrated.bestMoves['10'],undefined,'old BEST for rebalanced level 10 is removed');
-assert.equal(migrated.bestMoves['35'],undefined,'old BEST for rebalanced level 35 is removed');
-assert.equal(migrated.bestMoves['36'],36,'BEST for unchanged level 36 is preserved');
-assert.equal(migrated.bestMoves['40'],62,'BEST for unchanged level 40 is preserved');
-assert.equal(migrated.progressionVersion,2,'save is migrated to the new progression version');
+// Progress remains unlocked/cleared, but BEST records are invalidated only
+// for boards changed in progression version 3. Unchanged v2 records survive.
+function loadStorage(saved){
+  const storageContext={window:{CR_STAGES:stages},localStorage:{getItem:()=>JSON.stringify(saved),setItem:()=>{}}};
+  vm.createContext(storageContext);vm.runInContext(fs.readFileSync('js/storage.js','utf8'),storageContext,{filename:'js/storage.js'});
+  return storageContext.window.CRStorage.load();
+}
+const savedV2={unlockedStage:40,clearedStages:Array.from({length:39},(_,i)=>i+1),bestMoves:{'10':15,'15':29,'25':37,'26':37,'35':46,'36':36,'40':62},sound:true,vibration:true,tutorialCompleted:true,progressionVersion:2};
+const migratedV2=loadStorage(savedV2);
+assert.equal(migratedV2.unlockedStage,40,'unlocked progress is preserved');
+assert.equal(migratedV2.clearedStages.length,39,'cleared progress is preserved');
+assert.equal(migratedV2.bestMoves['10'],15,'unchanged level 10 BEST is preserved');
+assert.equal(migratedV2.bestMoves['25'],37,'unchanged level 25 BEST is preserved');
+assert.equal(migratedV2.bestMoves['15'],undefined,'changed level 15 BEST is removed');
+assert.equal(migratedV2.bestMoves['26'],undefined,'changed level 26 BEST is removed');
+assert.equal(migratedV2.bestMoves['35'],undefined,'changed level 35 BEST is removed');
+assert.equal(migratedV2.bestMoves['36'],36,'unchanged level 36 BEST is preserved');
+assert.equal(migratedV2.bestMoves['40'],62,'unchanged level 40 BEST is preserved');
+assert.equal(migratedV2.progressionVersion,3,'save is migrated to progression version 3');
 
-console.log('per-stage difficulty progression: 55-level ordering, constraints, certificates, and save migration passed');
+const savedLegacy={unlockedStage:40,clearedStages:[1,2,3],bestMoves:{'10':15,'35':46,'36':36},progressionVersion:1};
+const migratedLegacy=loadStorage(savedLegacy);
+assert.equal(migratedLegacy.bestMoves['10'],undefined,'pre-v2 BEST inside the original rebalance is removed');
+assert.equal(migratedLegacy.bestMoves['35'],undefined,'pre-v2 BEST through level 35 is removed');
+assert.equal(migratedLegacy.bestMoves['36'],36,'pre-v2 BEST above level 35 is preserved');
+
+console.log('strict per-stage progression: all 55 transitions, certificates, and save migration passed');
