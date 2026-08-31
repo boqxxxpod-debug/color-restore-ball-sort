@@ -1,20 +1,34 @@
 (function(){
   'use strict';
   function clone(t){return t.map(function(x){return x.slice();});}
-  function cloneRuleState(state){return {locksOpen:!!(state&&state.locksOpen)};}
+  function cloneRuleState(state){return {locksOpen:!!(state&&state.locksOpen),chainIndex:Math.max(0,state&&Number.isInteger(state.chainIndex)?state.chainIndex:0)};}
   function topRun(tube){if(!tube.length)return 0;var c=tube[tube.length-1],n=0;for(var i=tube.length-1;i>=0&&tube[i]===c;i--)n++;return n;}
   function completeTube(tube,cap){return tube.length===cap&&tube.every(function(c){return c===tube[0];});}
   function completedCount(tubes,cap){return tubes.reduce(function(n,tube){return n+(completeTube(tube,cap)?1:0);},0);}
   function lockedTubes(rules){return rules&&Array.isArray(rules.lockedTubes)?rules.lockedTubes:[];}
+  function unlockChain(rules){return rules&&Array.isArray(rules.unlockChain)?rules.unlockChain:[];}
+  function completedColor(tubes,cap,color){return tubes.some(function(tube){return completeTube(tube,cap)&&tube[0]===color;});}
+  function chainStepForTube(rules,index){
+    var chain=unlockChain(rules);
+    for(var i=0;i<chain.length;i++)if(chain[i]&&chain[i].tube===index)return {index:i,color:chain[i].color,tube:index};
+    return null;
+  }
   function targetEntries(rules){return rules&&rules.targets?Object.keys(rules.targets).map(Number).sort(function(a,b){return a-b;}):[];}
   function createRuleState(tubes,cap,rules){
     var locks=lockedTubes(rules),threshold=rules&&rules.unlockAfterCompleted||1;
-    return {locksOpen:!locks.length||completedCount(tubes,cap)>=threshold};
+    var state={locksOpen:!locks.length||completedCount(tubes,cap)>=threshold,chainIndex:0};
+    updateRuleState(tubes,cap,rules,state);return state;
   }
-  function isTubeLocked(rules,ruleState,index){return lockedTubes(rules).indexOf(index)>=0&&!(ruleState&&ruleState.locksOpen);}
+  function isTubeLocked(rules,ruleState,index){
+    if(lockedTubes(rules).indexOf(index)>=0&&!(ruleState&&ruleState.locksOpen))return true;
+    var step=chainStepForTube(rules,index);return !!step&&step.index>=Math.max(0,ruleState&&ruleState.chainIndex||0);
+  }
   function updateRuleState(tubes,cap,rules,ruleState){
     if(!ruleState)return;
     if(!ruleState.locksOpen&&lockedTubes(rules).length&&completedCount(tubes,cap)>=(rules.unlockAfterCompleted||1))ruleState.locksOpen=true;
+    var chain=unlockChain(rules),index=Math.max(0,ruleState.chainIndex||0);
+    while(index<chain.length&&completedColor(tubes,cap,chain[index].color))index++;
+    ruleState.chainIndex=index;
   }
   function legal(tubes,from,to,cap,rules,ruleState){
     if(from===to||!tubes[from]||!tubes[to]||!tubes[from].length||tubes[to].length>=cap)return false;
@@ -38,17 +52,18 @@
     return 'free';
   }
   function ruleKey(rules,ruleState){
-    if(!rules||(!lockedTubes(rules).length&&!targetEntries(rules).length))return '';
-    var locks=lockedTubes(rules).slice().sort(function(a,b){return a-b;}).join(','),targets=targetEntries(rules).map(function(i){return i+':'+rules.targets[i];}).join(',');
-    return 'r[l:'+locks+';u:'+(rules.unlockAfterCompleted||1)+';t:'+targets+'];s:'+(ruleState&&ruleState.locksOpen?1:0)+'|';
+    if(!rules||(!lockedTubes(rules).length&&!targetEntries(rules).length&&!unlockChain(rules).length))return '';
+    var locks=lockedTubes(rules).slice().sort(function(a,b){return a-b;}).join(','),targets=targetEntries(rules).map(function(i){return i+':'+rules.targets[i];}).join(','),chain=unlockChain(rules).map(function(step){return step.color+':'+step.tube;}).join(',');
+    return 'r[l:'+locks+';u:'+(rules.unlockAfterCompleted||1)+';t:'+targets+';c:'+chain+'];s:'+(ruleState&&ruleState.locksOpen?1:0)+','+Math.max(0,ruleState&&ruleState.chainIndex||0)+'|';
   }
   // Only tubes with a special rule keep their position. All other tube
   // permutations still share one visited/cache entry.
   function stateKey(tubes,cap,rules,ruleState){
-    if(!rules||(!lockedTubes(rules).length&&!targetEntries(rules).length))return cap+'|'+tubes.map(function(t){return t.join(',');}).sort().join('|');
+    if(!rules||(!lockedTubes(rules).length&&!targetEntries(rules).length&&!unlockChain(rules).length))return cap+'|'+tubes.map(function(t){return t.join(',');}).sort().join('|');
     var fixed={},free=[];
     targetEntries(rules).forEach(function(i){fixed[i]=1;});
     if(!(ruleState&&ruleState.locksOpen))lockedTubes(rules).forEach(function(i){fixed[i]=1;});
+    unlockChain(rules).forEach(function(step){if(isTubeLocked(rules,ruleState,step.tube))fixed[step.tube]=1;});
     var positioned=[];tubes.forEach(function(t,i){if(fixed[i])positioned.push(i+':'+t.join(','));else free.push(t.join(','));});
     return cap+'|'+ruleKey(rules,ruleState)+'fixed:'+positioned.join('|')+'|free:'+free.sort().join('|');
   }
@@ -107,5 +122,5 @@
     }
     return {step:step,key:stateKey(start,cap,rules,startState),get visited(){return visited.size;}};
   }
-  window.CRGame={clone:clone,cloneRuleState:cloneRuleState,createRuleState:createRuleState,isTubeLocked:isTubeLocked,completedCount:completedCount,topRun:topRun,isLegalMove:legal,applyMove:move,isCleared:cleared,isStuck:stuck,stateKey:stateKey,createSolveSearch:createSolveSearch,createHintSearch:createHintSearch,cachedSolvability:cachedSolvability};
+  window.CRGame={clone:clone,cloneRuleState:cloneRuleState,createRuleState:createRuleState,isTubeLocked:isTubeLocked,chainStepForTube:chainStepForTube,completedCount:completedCount,topRun:topRun,isLegalMove:legal,applyMove:move,isCleared:cleared,isStuck:stuck,stateKey:stateKey,createSolveSearch:createSolveSearch,createHintSearch:createHintSearch,cachedSolvability:cachedSolvability};
 }());

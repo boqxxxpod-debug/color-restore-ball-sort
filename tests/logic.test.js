@@ -14,7 +14,7 @@ assert.equal(new Set(versions).size,1,'production assets must share one release 
 console.log(`all production assets use cache version ${versions[0]}`);
 assert(html.includes('class="level-progress"'),'game header must expose an independent level progress block');
 assert(html.includes('LEVEL <span id="stage-number">1</span>'),'current level must remain visible in the game header');
-assert(html.includes('<span id="stage-total">55</span>'),'total level count must remain visible in the game header');
+assert(html.includes('<span id="stage-total">60</span>'),'total level count must remain visible in the game header');
 assert(!html.includes('user-scalable=no'),'viewport must allow accessibility zoom');
 
 // A legal operation always moves exactly the single top ball, even when a
@@ -41,6 +41,16 @@ assert.equal(solve([['red','blue'],['blue','red'],[]],2,{maxVisited:1}).result,'
 assert.equal(solve([['x','y'],[],[]],2,{maxVisited:1}).result,'unknown','a search limit is inconclusive, not unsolvable');
 assert.equal(G.stateKey([['red'],[],['blue']],2),G.stateKey([['blue'],['red'],[]],2),'tube permutations normalize to one state');
 console.log('single-ball, exhaustive solver, normalization, cache, and cutoff tests passed');
+
+const chainRules={unlockChain:[{color:'red',tube:2},{color:'blue',tube:3}]},chainBoard=[['red'],['blue','red'],['blue'],['green'],[]],chainState=G.createRuleState(chainBoard,2,chainRules);
+assert.equal(chainState.chainIndex,0);assert(G.isTubeLocked(chainRules,chainState,2)&&G.isTubeLocked(chainRules,chainState,3));
+assert(!G.isLegalMove(chainBoard,2,1,2,chainRules,chainState),'the first chain tube rejects input before its color completes');
+assert.equal(G.applyMove(chainBoard,1,0,2,chainRules,chainState),1);assert.equal(chainState.chainIndex,1,'red completion advances exactly one step');assert(!G.isTubeLocked(chainRules,chainState,2)&&G.isTubeLocked(chainRules,chainState,3));
+const chainSnapshot={tubes:G.clone(chainBoard),ruleState:G.cloneRuleState(chainState),moveCount:1},closedKey=G.stateKey(chainBoard,2,chainRules,{locksOpen:true,chainIndex:0}),openKey=G.stateKey(chainBoard,2,chainRules,chainState);
+assert.notEqual(closedKey,openKey,'stateKey keeps otherwise identical chain progress separate');
+assert.equal(G.applyMove(chainBoard,2,1,2,chainRules,chainState),1);assert.equal(chainState.chainIndex,2,'blue completion advances the second step');assert(!G.isTubeLocked(chainRules,chainState,3));
+chainBoard.splice(0,chainBoard.length,...G.clone(chainSnapshot.tubes));Object.assign(chainState,G.cloneRuleState(chainSnapshot.ruleState));assert.equal(chainState.chainIndex,1,'undo snapshot restores chain progress');assert(G.isTubeLocked(chainRules,chainState,3),'undo relocks only the reverted step');
+console.log('sequential chain legality, state key, and undo snapshot tests passed');
 
 // The UI stores one pre-move snapshot per operation, so one undo restores one
 // ball and its corresponding Moves increment.

@@ -7,12 +7,12 @@ for(const file of ['js/game.js','data/stages.js','data/advanced-stages.js','data
 }
 const G=context.window.CRGame,stages=context.window.CR_STAGES;
 
-assert.equal(stages.length,55,'the game still has 55 levels');
+assert.equal(stages.length,60,'the game has 60 levels');
 stages.forEach((stage,index)=>{
   assert.equal(stage.id,index+1,`level ${index+1}: id is contiguous`);
   assert.equal(stage.progressionRank,index+1,`level ${index+1}: progression rank is contiguous`);
 });
-assert.equal(new Set(stages.map(stage=>stage.sourceId)).size,55,'every verified source slot is used exactly once');
+assert.equal(new Set(stages.map(stage=>stage.sourceId)).size,60,'every verified source slot is used exactly once');
 
 // Levels 1-35 now have a strict measured Analyzer increase. This removes all
 // plateaus instead of merely limiting their length.
@@ -52,7 +52,7 @@ for(let level=26;level<=35;level++){
 });
 
 // The remaining transitions each introduce or strengthen one concrete
-// gameplay pressure, so every transition 1->2 through 54->55 is covered.
+// gameplay pressure, so every transition 1->2 through 59->60 is covered.
 assert.equal(stages[35].capacity,5,'level 36 is harder by introducing five-ball tubes');
 for(let i=36;i<40;i++)assert(stages[i].verifiedMoves>stages[i-1].verifiedMoves,`level ${i+1}: tower solution length rises`);
 
@@ -71,6 +71,21 @@ for(let i=51;i<55;i++){
   assert(current.minimumMoves>previous.minimumMoves,`level ${i+1}: exact minimum rises`);
   assert(current.moveLimit-current.minimumMoves<previous.moveLimit-previous.minimumMoves,`level ${i+1}: move allowance tightens`);
 }
+
+const chainStages=stages.slice(55),expectedDepths=[1,1,2,2,3];
+chainStages.forEach((stage,index)=>{
+  assert.equal(stage.rules.unlockChain.length,expectedDepths[index],`level ${stage.id}: chain depth progression`);
+  const state=G.createRuleState(stage.tubes,4,stage.rules),search=G.createHintSearch(stage.tubes,4,{maxVisited:50000,rules:stage.rules,ruleState:state});
+  let result;do{result=search.step(10000);}while(result.status==='searching');
+  assert.equal(result.status,'solved',`level ${stage.id}: chain shortest-path search completes`);
+  assert.equal(result.distance,stage.minimumMoves,`level ${stage.id}: chain minimum is production-BFS verified`);
+});
+assert(chainStages[1].minimumMoves>chainStages[0].minimumMoves,'level 57 raises the exact minimum beyond level 56');
+assert(chainStages[1].unlockMoves[0]>chainStages[0].unlockMoves[0],'level 57 delays its single unlock beyond level 56');
+assert(chainStages[2].chainDepth>chainStages[1].chainDepth,'level 58 adds a second chained unlock');
+assert(chainStages[3].minimumMoves>chainStages[2].minimumMoves,'level 59 raises the exact minimum beyond level 58');
+assert(chainStages[3].unlockMoves.at(-1)>chainStages[2].unlockMoves.at(-1),'level 59 delays its final unlock beyond level 58');
+assert(chainStages[4].chainDepth>chainStages[3].chainDepth,'level 60 adds a third chained unlock');
 
 // Every runtime board, including the replacements, must still replay a legal
 // production-rules certificate and clear.
@@ -107,4 +122,4 @@ assert.equal(migratedLegacy.bestMoves['10'],undefined,'pre-v2 BEST inside the or
 assert.equal(migratedLegacy.bestMoves['35'],undefined,'pre-v2 BEST through level 35 is removed');
 assert.equal(migratedLegacy.bestMoves['36'],36,'pre-v2 BEST above level 35 is preserved');
 
-console.log('strict per-stage progression: all 55 transitions, certificates, and save migration passed');
+console.log('strict per-stage progression: all 60 levels, certificates, chain difficulty, and save migration passed');

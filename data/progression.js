@@ -2,7 +2,7 @@
   'use strict';
 
   var stages = window.CR_STAGES;
-  if (!Array.isArray(stages) || stages.length !== 55) return;
+  if (!Array.isArray(stages) || stages.length !== 60) return;
 
   // Levels 1-25 keep the verified boards from the previous progression pass.
   // Level 15 replaces the remaining Analyzer plateau. Levels 26-35 use
@@ -10,7 +10,8 @@
   // one move per level (34 -> 43) and whose Analyzer score also rises.
   // Levels 36-55 keep their existing per-stage mechanical pressure:
   // five-ball depth, lock route length, target count, then move-limit slack.
-  var sourceOrder = [1,2,4,5,3,7,9,8,6,10,13,12,11,14,20,19,22,18,16,17,15,24,21,25,23,26,28,27,29,30,35,34,32,31,33,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55];
+  // Levels 56-60 add one-, two-, then three-step color unlock chains.
+  var sourceOrder = [1,2,4,5,3,7,9,8,6,10,13,12,11,14,20,19,22,18,16,17,15,24,21,25,23,26,28,27,29,30,35,34,32,31,33,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60];
 
   var analyzerScores = {"1":24.3,"2":24.4,"3":32.0,"4":29.5,"5":30.2,"6":38.2,"7":35.5,"8":35.9,"9":35.7,"10":40.0,"11":43.7,"12":43.1,"13":40.3,"14":56.7,"15":60.9,"16":59.8,"17":60.3,"18":58.5,"19":57.1,"20":56.7,"21":61.9,"22":57.4,"23":63.5,"24":61.1,"25":62.0,"26":68.0,"27":69.8,"28":68.0,"29":69.8,"30":69.8};
 

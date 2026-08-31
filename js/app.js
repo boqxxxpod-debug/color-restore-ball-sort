@@ -3,7 +3,7 @@
   var $=function(s){return document.querySelector(s);};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s));};
   var save=CRStorage.load();
-  var state={stageId:1,capacity:4,tubes:[],initialTubes:[],rules:{},ruleState:{locksOpen:true},initialRuleState:{locksOpen:true},moveLimit:null,selectedTube:null,moveCount:0,history:[],isAnimating:false,isCleared:false,isStuck:false,isLimitFailed:false};
+  var state={stageId:1,capacity:4,tubes:[],initialTubes:[],rules:{},ruleState:{locksOpen:true,chainIndex:0},initialRuleState:{locksOpen:true,chainIndex:0},moveLimit:null,selectedTube:null,moveCount:0,history:[],isAnimating:false,isCleared:false,isStuck:false,isLimitFailed:false};
   var app=window.ColorRestore={save:save,state:state};
   var screens=$$('.screen'),board=$('#tube-board'),tutorialStep=0,hintTimer,solveTimer,solveGeneration=0;
 
@@ -22,7 +22,10 @@
   function cancelSolve(){solveGeneration++;clearTimeout(solveTimer);}
   function clearHint(){clearTimeout(hintTimer);$$('.hint-from,.hint-to').forEach(function(el){el.classList.remove('hint-from','hint-to');});}
   function cancelWork(){cancelSolve();clearHint();}
+  function colorName(color){return {red:'赤',blue:'青',yellow:'黄',green:'緑',purple:'紫',orange:'橙',cyan:'水',pink:'桃'}[color]||color;}
   function stageRuleLabel(data){
+    var chain=data.rules&&data.rules.unlockChain||[];
+    if(chain.length){var index=Math.min(chain.length,state.ruleState.chainIndex||0);return index===chain.length?'🔗 連鎖 '+index+'/'+chain.length+' 完了':'🔗 連鎖 '+index+'/'+chain.length+'・'+colorName(chain[index].color)+'完成で筒'+(chain[index].tube+1)+'解放';}
     if(data.moveLimit)return '⏱ '+data.moveLimit+'手以内';
     if(data.rules&&data.rules.targets)return '🎯 指定色を目標チューブへ';
     if(data.rules&&data.rules.lockedTubes)return '🔒 1色完成でチューブ解放';
@@ -40,10 +43,11 @@
     render();show('game-screen');updateTutorial();
   }
   function makeTube(i){
-    var tube=state.tubes[i],el=document.createElement('button'),locked=CRGame.isTubeLocked(state.rules,state.ruleState,i),isLock=(state.rules.lockedTubes||[]).indexOf(i)>=0,target=state.rules.targets&&state.rules.targets[i];
+    var tube=state.tubes[i],el=document.createElement('button'),locked=CRGame.isTubeLocked(state.rules,state.ruleState,i),chainStep=CRGame.chainStepForTube(state.rules,i),isLock=(state.rules.lockedTubes||[]).indexOf(i)>=0||!!chainStep,target=state.rules.targets&&state.rules.targets[i];
     el.className='tube capacity-'+state.capacity+(state.selectedTube===i?' selected':'')+(locked?' locked-tube':'')+(isLock&&!locked?' unlocked-tube':'')+(target?' target-tube target-'+target:'');el.dataset.index=i;
-    var label='チューブ '+(i+1)+'、ボール '+tube.length+'個';if(locked)label+='、ロック中';if(target)label+='、目標 '+target;el.setAttribute('aria-label',label);if(locked)el.setAttribute('aria-disabled','true');
+    var label='チューブ '+(i+1)+'、ボール '+tube.length+'個';if(locked)label+='、ロック中';if(chainStep&&locked)label+='、連鎖'+(chainStep.index+1)+'段目、'+colorName(chainStep.color)+'完成で解放';if(target)label+='、目標 '+target;el.setAttribute('aria-label',label);if(locked)el.setAttribute('aria-disabled','true');
     if(isLock){var lock=document.createElement('span');lock.className='lock-badge';lock.setAttribute('aria-hidden','true');lock.textContent=locked?'🔒':'🔓';el.appendChild(lock);}
+    if(chainStep&&locked){var condition=document.createElement('span');condition.className='unlock-condition condition-'+chainStep.color;condition.textContent=(chainStep.index+1)+'段 '+colorName(chainStep.color);el.appendChild(condition);}
     if(target){var marker=document.createElement('span');marker.className='target-marker';marker.setAttribute('aria-hidden','true');marker.textContent='◎';el.appendChild(marker);}
     for(var p=0;p<state.capacity;p++){var ball=document.createElement('i');ball.className='ball'+(p<tube.length?' '+tube[p]:' empty');ball.style.setProperty('--slot',p);el.appendChild(ball);}
     var pointerAt=0;el.addEventListener('pointerup',function(e){if(e.pointerType==='mouse'&&e.button!==0)return;pointerAt=Date.now();e.preventDefault();tapTube(i);});el.addEventListener('click',function(){if(Date.now()-pointerAt<500)return;tapTube(i);});return el;
@@ -54,7 +58,7 @@
   }
   function updateSelection(previous){if(previous!==null&&board.children[previous])board.children[previous].classList.remove('selected');if(state.selectedTube!==null&&board.children[state.selectedTube])board.children[state.selectedTube].classList.add('selected');}
   function updateTube(i){var old=board.children[i];if(old)board.replaceChild(makeTube(i),old);}
-  function render(){board.innerHTML='';board.classList.toggle('capacity-5',state.capacity===5);state.tubes.forEach(function(_,i){board.appendChild(makeTube(i));});updateCounters();}
+  function render(){board.innerHTML='';board.classList.toggle('capacity-5',state.capacity===5);state.tubes.forEach(function(_,i){board.appendChild(makeTube(i));});updateCounters();var data=CR_STAGES[state.stageId-1];if(data)$('#rule-chip').textContent=stageRuleLabel(data);}
   function updateTutorial(){var t=$('#tutorial');if(state.stageId===1&&!save.tutorialCompleted){t.classList.remove('hidden');t.querySelector('b').textContent=tutorialStep?'移動先の筒をタップ':'この筒をタップ';}else t.classList.add('hidden');}
   function checkSolvability(){
     cancelSolve();if(state.isCleared||state.isLimitFailed)return;
@@ -71,14 +75,14 @@
   }
   function tapTube(i){
     if(state.isAnimating||state.isCleared||state.isLimitFailed)return;clearHint();
-    if(CRGame.isTubeLocked(state.rules,state.ruleState,i)){invalid(i);toast('🔒 1色完成すると使えます');return;}
+    if(CRGame.isTubeLocked(state.rules,state.ruleState,i)){invalid(i);var step=CRGame.chainStepForTube(state.rules,i);toast(step?'🔒 '+colorName(step.color)+'を完成すると使えます':'🔒 1色完成すると使えます');return;}
     if(state.selectedTube===null){if(!state.tubes[i].length){invalid(i);return;}state.selectedTube=i;tutorialStep=1;updateSelection(null);updateTutorial();return;}
     if(state.selectedTube===i){var deselected=state.selectedTube;state.selectedTube=null;updateSelection(deselected);return;}
     var from=state.selectedTube;if(!CRGame.isLegalMove(state.tubes,from,i,state.capacity,state.rules,state.ruleState)){invalid(i);return;}
     cancelSolve();state.history.push({tubes:CRGame.clone(state.tubes),ruleState:CRGame.cloneRuleState(state.ruleState),moveCount:state.moveCount});if(state.history.length>100)state.history.shift();state.isAnimating=true;
-    var locksWereOpen=state.ruleState.locksOpen;CRGame.applyMove(state.tubes,from,i,state.capacity,state.rules,state.ruleState);var openedNow=!locksWereOpen&&state.ruleState.locksOpen;state.moveCount++;state.selectedTube=null;
+    var locksWereOpen=state.ruleState.locksOpen,chainBefore=state.ruleState.chainIndex||0;CRGame.applyMove(state.tubes,from,i,state.capacity,state.rules,state.ruleState);var openedLegacy=!locksWereOpen&&state.ruleState.locksOpen,openedChain=(state.ruleState.chainIndex||0)>chainBefore,openedNow=openedLegacy||openedChain,unlockedStep=openedChain&&state.rules.unlockChain[chainBefore];state.moveCount++;state.selectedTube=null;
     if(openedNow)render();else{updateTube(from);updateTube(i);updateCounters();}
-    var fromEl=board.children[from],toEl=board.children[i],finished=false;fromEl.classList.add('pouring');toEl.classList.add('receiving');if(openedNow)toast('🔓 チューブを解放しました');if(!save.tutorialCompleted){save.tutorialCompleted=true;persist();}CRSound.move();updateTutorial();
+    var fromEl=board.children[from],toEl=board.children[i],finished=false;fromEl.classList.add('pouring');toEl.classList.add('receiving');if(unlockedStep)toast('🔓 '+colorName(unlockedStep.color)+'完成・筒'+(unlockedStep.tube+1)+'解放');else if(openedLegacy)toast('🔓 チューブを解放しました');if(!save.tutorialCompleted){save.tutorialCompleted=true;persist();}CRSound.move();updateTutorial();
     function finish(){if(finished)return;finished=true;state.isAnimating=false;fromEl.classList.remove('pouring');toEl.classList.remove('receiving');updateCounters();if(CRGame.isCleared(state.tubes,state.capacity,state.rules))clearStage();else if(state.moveLimit&&state.moveCount>=state.moveLimit)showLimit();else checkSolvability();}
     fromEl.addEventListener('animationend',finish,{once:true});setTimeout(finish,220);
   }
