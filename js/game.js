@@ -18,10 +18,14 @@
   function forgeLimit(rules){return Math.max(0,rules&&Number.isInteger(rules.forgeLimit)?rules.forgeLimit:0);}
   function dyeStock(rules){return rules&&rules.dyeStock&&typeof rules.dyeStock==='object'?rules.dyeStock:{};}
   function dyeGoals(rules){return rules&&rules.dyeGoals&&typeof rules.dyeGoals==='object'?rules.dyeGoals:{};}
+  function portalPairs(rules){return rules&&Array.isArray(rules.portals)?rules.portals.filter(function(pair){return pair&&Number.isInteger(pair.entry)&&Number.isInteger(pair.exit)&&pair.entry>=0&&pair.exit>=0&&pair.entry!==pair.exit;}):[];}
+  function portalForEntry(rules,index){var pairs=portalPairs(rules);for(var i=0;i<pairs.length;i++)if(pairs[i].entry===index)return pairs[i];return null;}
+  function portalForTube(rules,index){var pairs=portalPairs(rules);for(var i=0;i<pairs.length;i++)if(pairs[i].entry===index||pairs[i].exit===index)return {entry:pairs[i].entry,exit:pairs[i].exit,symbol:pairs[i].symbol||String.fromCharCode(65+i),pairIndex:i,role:pairs[i].entry===index?'entry':'exit'};return null;}
+  function portalExit(rules,index){var pair=portalForEntry(rules,index);return pair?pair.exit:-1;}
   function dyeColors(rules){var order=['red','blue','yellow','green','purple','orange','cyan','pink'];return Object.keys(dyeStock(rules)).filter(function(color){return Number.isInteger(dyeStock(rules)[color])&&dyeStock(rules)[color]>0;}).sort(function(a,b){var ai=order.indexOf(a),bi=order.indexOf(b);return (ai<0?999:ai)-(bi<0?999:bi)||a.localeCompare(b);});}
   function colorCounts(tubes){var counts={};tubes.forEach(function(tube){tube.forEach(function(color){if(color!=='gray')counts[color]=(counts[color]||0)+1;});});return counts;}
   function dyeNeeds(tubes,rules){var counts=colorCounts(tubes),needs={};Object.keys(dyeGoals(rules)).forEach(function(color){var needed=Math.max(0,dyeGoals(rules)[color]-(counts[color]||0));if(needed)needs[color]=needed;});return needs;}
-  function hasSpecialRules(rules){return !!(rules&&(lockedTubes(rules).length||targetEntries(rules).length||unlockChain(rules).length||flipLimit(rules)||forgeLimit(rules)));}
+  function hasSpecialRules(rules){return !!(rules&&(lockedTubes(rules).length||targetEntries(rules).length||unlockChain(rules).length||flipLimit(rules)||forgeLimit(rules)||portalPairs(rules).length));}
   function createRuleState(tubes,cap,rules){
     var locks=lockedTubes(rules),threshold=rules&&rules.unlockAfterCompleted||1;
     var state={locksOpen:!locks.length||completedCount(tubes,cap)>=threshold,chainIndex:0,flipsRemaining:flipLimit(rules),flipsUsed:0,isFlipped:false,forgeRemaining:forgeLimit(rules),dyesUsed:0,dyeUsed:{}};
@@ -41,9 +45,11 @@
   function legal(tubes,from,to,cap,rules,ruleState){
     if(from===to||!tubes[from]||!tubes[to]||!tubes[from].length||tubes[to].length>=cap)return false;
     if(isTubeLocked(rules,ruleState,from)||isTubeLocked(rules,ruleState,to))return false;
-    return !tubes[to].length||tubes[to][tubes[to].length-1]===tubes[from][tubes[from].length-1];
+    if(tubes[to].length&&tubes[to][tubes[to].length-1]!==tubes[from][tubes[from].length-1])return false;
+    var exit=portalExit(rules,to);if(exit>=0&&(exit===from||!tubes[exit]||tubes[exit].length>=cap||isTubeLocked(rules,ruleState,exit)))return false;
+    return true;
   }
-  function move(tubes,from,to,cap,rules,ruleState){if(!legal(tubes,from,to,cap,rules,ruleState))return 0;tubes[to].push(tubes[from].pop());updateRuleState(tubes,cap,rules,ruleState);return 1;}
+  function move(tubes,from,to,cap,rules,ruleState){if(!legal(tubes,from,to,cap,rules,ruleState))return 0;var ball=tubes[from].pop(),exit=portalExit(rules,to);tubes[exit>=0?exit:to].push(ball);updateRuleState(tubes,cap,rules,ruleState);return 1;}
   function canFlip(rules,ruleState){return flipLimit(rules)>0&&!!ruleState&&ruleState.flipsRemaining>0;}
   function flip(tubes,rules,ruleState){if(!canFlip(rules,ruleState))return 0;tubes.forEach(function(tube){tube.reverse();});ruleState.flipsRemaining--;ruleState.flipsUsed++;ruleState.isFlipped=!ruleState.isFlipped;return 1;}
   function dyeChoices(tubes,index,rules,ruleState){
@@ -73,12 +79,13 @@
   function tubeRole(rules,ruleState,index){
     if(rules&&rules.targets&&rules.targets[index])return 'target:'+rules.targets[index];
     if(isTubeLocked(rules,ruleState,index))return 'locked:'+index;
+    var portal=portalForTube(rules,index);if(portal)return 'portal-'+portal.role+':'+portal.entry+'>'+portal.exit;
     return 'free';
   }
   function ruleKey(rules,ruleState){
     if(!hasSpecialRules(rules))return '';
-    var locks=lockedTubes(rules).slice().sort(function(a,b){return a-b;}).join(','),targets=targetEntries(rules).map(function(i){return i+':'+rules.targets[i];}).join(','),chain=unlockChain(rules).map(function(step){return step.color+':'+step.tube;}).join(','),stock=dyeColors(rules).map(function(color){return color+':'+dyeStock(rules)[color];}).join(','),goals=Object.keys(dyeGoals(rules)).sort().map(function(color){return color+':'+dyeGoals(rules)[color];}).join(','),used=dyeColors(rules).map(function(color){return color+':'+Math.max(0,ruleState&&ruleState.dyeUsed&&ruleState.dyeUsed[color]||0);}).join(',');
-    return 'r[l:'+locks+';u:'+(rules.unlockAfterCompleted||1)+';t:'+targets+';c:'+chain+';f:'+flipLimit(rules)+';g:'+forgeLimit(rules)+';p:'+stock+';n:'+goals+'];s:'+(ruleState&&ruleState.locksOpen?1:0)+','+Math.max(0,ruleState&&ruleState.chainIndex||0)+','+Math.max(0,ruleState&&ruleState.flipsRemaining||0)+','+(ruleState&&ruleState.isFlipped?1:0)+','+Math.max(0,ruleState&&ruleState.forgeRemaining||0)+','+used+'|';
+    var locks=lockedTubes(rules).slice().sort(function(a,b){return a-b;}).join(','),targets=targetEntries(rules).map(function(i){return i+':'+rules.targets[i];}).join(','),chain=unlockChain(rules).map(function(step){return step.color+':'+step.tube;}).join(','),portals=portalPairs(rules).map(function(pair){return pair.entry+'>'+pair.exit;}).join(','),stock=dyeColors(rules).map(function(color){return color+':'+dyeStock(rules)[color];}).join(','),goals=Object.keys(dyeGoals(rules)).sort().map(function(color){return color+':'+dyeGoals(rules)[color];}).join(','),used=dyeColors(rules).map(function(color){return color+':'+Math.max(0,ruleState&&ruleState.dyeUsed&&ruleState.dyeUsed[color]||0);}).join(',');
+    return 'r[l:'+locks+';u:'+(rules.unlockAfterCompleted||1)+';t:'+targets+';c:'+chain+';o:'+portals+';f:'+flipLimit(rules)+';g:'+forgeLimit(rules)+';p:'+stock+';n:'+goals+'];s:'+(ruleState&&ruleState.locksOpen?1:0)+','+Math.max(0,ruleState&&ruleState.chainIndex||0)+','+Math.max(0,ruleState&&ruleState.flipsRemaining||0)+','+(ruleState&&ruleState.isFlipped?1:0)+','+Math.max(0,ruleState&&ruleState.forgeRemaining||0)+','+used+'|';
   }
   // Only tubes with a special rule keep their position. All other tube
   // permutations still share one visited/cache entry.
@@ -88,6 +95,7 @@
     targetEntries(rules).forEach(function(i){fixed[i]=1;});
     if(!(ruleState&&ruleState.locksOpen))lockedTubes(rules).forEach(function(i){fixed[i]=1;});
     unlockChain(rules).forEach(function(step){if(isTubeLocked(rules,ruleState,step.tube))fixed[step.tube]=1;});
+    portalPairs(rules).forEach(function(pair){fixed[pair.entry]=1;fixed[pair.exit]=1;});
     var positioned=[];tubes.forEach(function(t,i){if(fixed[i])positioned.push(i+':'+t.join(','));else free.push(t.join(','));});
     return cap+'|'+ruleKey(rules,ruleState)+'fixed:'+positioned.join('|')+'|free:'+free.sort().join('|');
   }
@@ -170,5 +178,5 @@
     }
     return {step:step,key:stateKey(start,cap,rules,startState),get visited(){return visited.size;}};
   }
-  window.CRGame={clone:clone,cloneRuleState:cloneRuleState,createRuleState:createRuleState,isTubeLocked:isTubeLocked,chainStepForTube:chainStepForTube,completedCount:completedCount,topRun:topRun,isLegalMove:legal,applyMove:move,canFlip:canFlip,applyFlip:flip,dyeChoices:dyeChoices,canDye:canDye,applyDye:dye,dyeNeeds:dyeNeeds,isCleared:cleared,isStuck:stuck,stateKey:stateKey,createSolveSearch:createSolveSearch,createHintSearch:createHintSearch,cachedSolvability:cachedSolvability};
+  window.CRGame={clone:clone,cloneRuleState:cloneRuleState,createRuleState:createRuleState,isTubeLocked:isTubeLocked,chainStepForTube:chainStepForTube,completedCount:completedCount,topRun:topRun,isLegalMove:legal,applyMove:move,canFlip:canFlip,applyFlip:flip,dyeChoices:dyeChoices,canDye:canDye,applyDye:dye,dyeNeeds:dyeNeeds,portalPairs:portalPairs,portalForTube:portalForTube,portalExit:portalExit,isCleared:cleared,isStuck:stuck,stateKey:stateKey,createSolveSearch:createSolveSearch,createHintSearch:createHintSearch,cachedSolvability:cachedSolvability};
 }());

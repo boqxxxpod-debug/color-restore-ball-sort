@@ -69,3 +69,17 @@
 @keyframes forgePulse{50%{box-shadow:0 0 0 5px #72f4db88,0 12px 28px #174c5566}}
 @keyframes forgeHint{50%{transform:translateY(-4px) scale(1.02);box-shadow:0 0 0 5px #ffe66f88,0 12px 26px #174c5566}}
 @media(max-width:370px){.forge-control{grid-template-columns:38px 1fr auto;min-height:50px;padding:5px 10px}.forge-control>span{font-size:25px}.forge-control>b{font-size:14px}.forge-control small{font-size:9px}.forge-picker{padding:8px}.forge-color{min-height:44px;padding:4px 6px}}
+
+/* PORTAL TUBES show direction with matching symbols, roles, and a live route. */
+.world.portal{background:linear-gradient(#141b46 0 42%,#4a3f96 42% 68%,#172744 68%)}
+.portal .sun{background:#c8fff5;box-shadow:0 0 42px #57e6ff}.portal .cloud{opacity:.14}.portal .scenery{height:49%;background:radial-gradient(circle at 18% 25%,#7fffe0 0 3px,transparent 4px),radial-gradient(circle at 76% 38%,#ff9ee9 0 3px,transparent 4px),linear-gradient(115deg,transparent 0 30%,#65dfff33 31% 34%,transparent 35% 67%,#fa8adb33 68% 71%,transparent 72%);background-size:76px 72px,98px 84px,auto}
+.portal-lines{position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:visible;pointer-events:none}.portal .tube-board{z-index:3}.portal-line{fill:none;stroke:#64f3dc;stroke-width:4;stroke-linecap:round;stroke-dasharray:7 7;opacity:.6;filter:drop-shadow(0 0 4px #0ce0ff);animation:portalDrift 1.2s linear infinite}.portal-line.portal-pair-1{stroke:#ff8ddd;filter:drop-shadow(0 0 4px #ff55d2)}.portal-line.active{stroke-width:7;opacity:1;animation:portalFlash .38s ease}
+.tube.portal-entry,.tube.portal-exit{--portal:#42d7c1;outline:2px solid var(--portal);outline-offset:3px}.tube.portal-pair-1{--portal:#ed73c8}.tube.portal-entry:before{border-style:dashed;background:#d8fff6cc}.tube.portal-exit:before{border-style:double;border-width:5px;background:#effcffdd}
+.portal-badge{position:absolute;z-index:7;top:-32px;left:50%;transform:translateX(-50%);display:grid;place-items:center;min-width:42px;height:23px;padding:0 5px;border:2px solid #fff;border-radius:9px;background:#167d79;color:#fff;font-size:10px;font-weight:950;line-height:1;box-shadow:0 3px 9px #102c4d88;pointer-events:none}.portal-pair-1 .portal-badge{background:#a43d8b}.portal-badge b{font-size:12px}.portal-badge small{font-size:7px;letter-spacing:.4px}
+.tube.portal-entering{animation:portalEntry .38s ease}.tube.portal-exiting{animation:portalExit .38s ease}.ball.warping-ball{z-index:8;animation:portalBall .38s ease}
+@keyframes portalDrift{to{stroke-dashoffset:-28}}
+@keyframes portalFlash{50%{stroke-dashoffset:-42;filter:drop-shadow(0 0 12px #fff)}}
+@keyframes portalEntry{50%{transform:scale(.9);filter:drop-shadow(0 0 15px var(--portal))}}
+@keyframes portalExit{50%{transform:scale(1.08);filter:drop-shadow(0 0 18px var(--portal))}}
+@keyframes portalBall{0%{transform:scale(.2);opacity:.15;filter:brightness(2)}70%{transform:scale(1.22);opacity:1}}
+@media(max-width:370px){.portal-badge{top:-29px;min-width:37px;height:21px;padding:0 3px}.portal-badge b{font-size:11px}.portal-badge small{font-size:6px}.portal-line{stroke-width:3}}
