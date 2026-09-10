@@ -1,0 +1,12 @@
+(function(){
+  'use strict';
+  if(!Array.isArray(window.CR_STAGES)||window.CR_STAGES.length!==60)return;
+  var stages=[
+    {"id":61,"sourceId":61,"progressionRank":61,"colors":3,"capacity":4,"tubes":[["yellow","red","blue","blue"],["yellow","red","blue","yellow"],["blue","yellow","red","red"],[]],"difficulty":"flip","minimumMoves":10,"flipMoves":[2],"rules":{"flipLimit":1},"solution":[[1,3],{"type":"flip"},[0,3],[1,3],[0,1],[2,0],[2,3],[1,2],[1,2],[1,0]],"verifiedMoves":10,"generatedSeed":6100000},
+    {"id":62,"sourceId":62,"progressionRank":62,"colors":4,"capacity":4,"tubes":[["red","blue","blue","blue"],["yellow","blue","green","yellow"],["green","green","yellow","red"],["green","red","yellow","red"],[]],"difficulty":"flip","minimumMoves":11,"flipMoves":[4],"rules":{"flipLimit":1},"solution":[[2,4],[3,4],[2,3],{"type":"flip"},[0,4],[3,2],[3,4],[1,3],[1,0],[1,2],[1,3]],"verifiedMoves":11,"generatedSeed":6200000},
+    {"id":63,"sourceId":63,"progressionRank":63,"colors":4,"capacity":4,"tubes":[["red","green","green","yellow"],["red","blue","yellow","yellow"],["green","blue","blue","red"],["yellow","blue","red","green"],[]],"difficulty":"flip","minimumMoves":12,"flipMoves":[2,10],"rules":{"flipLimit":2},"solution":[[2,4],{"type":"flip"},[0,4],[1,4],[2,0],[1,2],[3,1],[3,2],[3,4],{"type":"flip"},[0,1],[3,0]],"verifiedMoves":12,"generatedSeed":6300002},
+    {"id":64,"sourceId":64,"progressionRank":64,"colors":5,"capacity":4,"tubes":[["yellow","purple","purple","green"],["yellow","yellow","blue","green"],["red","red","blue","purple"],["red","blue","green","purple"],["red","blue","yellow","green"],[],[]],"difficulty":"flip","minimumMoves":16,"flipMoves":[9],"rules":{"flipLimit":1,"lockedTubes":[0],"unlockAfterCompleted":1},"solution":[[1,5],[2,6],[3,6],[3,5],[1,3],[2,3],[4,5],[4,1],{"type":"flip"},[3,2],[4,2],[0,1],[0,6],[0,6],[0,5],[4,3]],"verifiedMoves":16,"generatedSeed":6400100},
+    {"id":65,"sourceId":65,"progressionRank":65,"colors":5,"capacity":4,"tubes":[["blue","yellow","red","yellow"],["green","yellow","green","green"],["green","purple","red","purple"],["red","red","purple","yellow"],["blue","purple","blue","blue"],[]],"difficulty":"flip","minimumMoves":18,"flipMoves":[4],"rules":{"flipLimit":2,"targets":{"0":"red"}},"solution":[[0,5],[3,5],[2,3],{"type":"flip"},[1,2],[1,5],[2,1],[2,1],[4,0],[4,2],[0,4],[0,4],[0,5],[3,0],[3,0],[2,3],[2,3],[2,0]],"verifiedMoves":18,"generatedSeed":6500007}
+  ];
+  Array.prototype.push.apply(window.CR_STAGES,stages);
+}());
