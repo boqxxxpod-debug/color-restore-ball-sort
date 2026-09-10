@@ -55,7 +55,7 @@ const snapshot={tubes:G.clone(keyBoard),ruleState:G.cloneRuleState(keyState)};as
 
 const html=fs.readFileSync('index.html','utf8'),app=fs.readFileSync('js/app.js','utf8'),css=fs.readFileSync('css/style.css','utf8');
 assert(html.includes('id="flip-btn"')&&html.includes('id="flip-count"'),'FLIP has a dedicated accessible control');
-assert(html.includes('data/flip-stages.js?v=20260910-1'),'FLIP stage data is loaded after progression');
+assert(html.includes('data/flip-stages.js?v=20260910-2'),'FLIP stage data is loaded after progression');
 assert(app.includes("$('#flip-btn').onclick=flipBoard")&&app.includes("result.move.type==='flip'"),'normal input and Hint expose FLIP');
 assert(app.includes('ruleState:CRGame.cloneRuleState(state.ruleState)'),'FLIP history captures the complete rule state');
 assert(css.includes('.tube-board.flipping')&&css.includes('@keyframes flipBoard'),'the board has a short FLIP animation');
