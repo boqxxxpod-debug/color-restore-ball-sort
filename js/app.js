@@ -3,7 +3,7 @@
   var $=function(s){return document.querySelector(s);};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s));};
   var save=CRStorage.load();
-  var state={stageId:1,capacity:4,tubes:[],initialTubes:[],rules:{},ruleState:{locksOpen:true,chainIndex:0,flipsRemaining:0,flipsUsed:0,isFlipped:false},initialRuleState:{locksOpen:true,chainIndex:0,flipsRemaining:0,flipsUsed:0,isFlipped:false},moveLimit:null,selectedTube:null,moveCount:0,history:[],isAnimating:false,isCleared:false,isStuck:false,isLimitFailed:false};
+  var state={stageId:1,capacity:4,tubes:[],initialTubes:[],rules:{},ruleState:{locksOpen:true,chainIndex:0,flipsRemaining:0,flipsUsed:0,isFlipped:false,forgeRemaining:0,dyesUsed:0,dyeUsed:{}},initialRuleState:{locksOpen:true,chainIndex:0,flipsRemaining:0,flipsUsed:0,isFlipped:false,forgeRemaining:0,dyesUsed:0,dyeUsed:{}},moveLimit:null,selectedTube:null,moveCount:0,history:[],isAnimating:false,isChoosingDye:false,isCleared:false,isStuck:false,isLimitFailed:false};
   var app=window.ColorRestore={save:save,state:state};
   var screens=$$('.screen'),board=$('#tube-board'),tutorialStep=0,hintTimer,solveTimer,solveGeneration=0;
 
@@ -20,17 +20,19 @@
     $$('#world-tabs button').forEach(function(b){b.onclick=function(){var tile=$('[data-stage="'+b.dataset.start+'"]');if(tile)tile.scrollIntoView({behavior:'smooth',block:'center'});};});
   }
   function cancelSolve(){solveGeneration++;clearTimeout(solveTimer);}
-  function clearHint(){clearTimeout(hintTimer);$$('.hint-from,.hint-to').forEach(function(el){el.classList.remove('hint-from','hint-to');});}
-  function cancelWork(){cancelSolve();clearHint();}
-  function colorName(color){return {red:'赤',blue:'青',yellow:'黄',green:'緑',purple:'紫',orange:'橙',cyan:'水',pink:'桃'}[color]||color;}
+  function clearHint(){clearTimeout(hintTimer);$$('.hint-from,.hint-to,.hint-forge').forEach(function(el){el.classList.remove('hint-from','hint-to','hint-forge');});}
+  function closeForgePicker(){state.isChoosingDye=false;var picker=$('#forge-picker'),button=$('#forge-btn'),options=$('#forge-options');if(picker)picker.classList.add('hidden');if(button)button.setAttribute('aria-expanded','false');if(options)options.innerHTML='';}
+  function cancelWork(){cancelSolve();clearHint();closeForgePicker();}
+  function colorName(color){return {red:'赤',blue:'青',yellow:'黄',green:'緑',purple:'紫',orange:'橙',cyan:'水',pink:'桃',gray:'無色'}[color]||color;}
   function stageRuleLabel(data){
-    var flip=data.rules&&data.rules.flipLimit||0,flipLabel=flip?'↕ FLIP 残り'+state.ruleState.flipsRemaining+'/'+flip+'・SIDE '+(state.ruleState.isFlipped?'B':'A'):'';
+    var forge=data.rules&&data.rules.forgeLimit||0,needs=forge?CRGame.dyeNeeds(state.tubes,state.rules):{},needColors=Object.keys(needs),forgeLabel=forge?'⚗ FORGE 残り'+state.ruleState.forgeRemaining+'/'+forge+(needColors.length?'・必要 '+needColors.map(function(color){return colorName(color)+'×'+needs[color];}).join(' '):'・配色完了'):'';
+    var flip=data.rules&&data.rules.flipLimit||0,flipLabel=flip?'↕ FLIP 残り'+state.ruleState.flipsRemaining+'/'+flip+'・SIDE '+(state.ruleState.isFlipped?'B':'A'):'',special=[forgeLabel,flipLabel].filter(Boolean).join('・');
     var chain=data.rules&&data.rules.unlockChain||[];
-    if(chain.length){var index=Math.min(chain.length,state.ruleState.chainIndex||0);return [flipLabel,index===chain.length?'🔗 連鎖 '+index+'/'+chain.length+' 完了':'🔗 連鎖 '+index+'/'+chain.length+'・'+colorName(chain[index].color)+'完成で筒'+(chain[index].tube+1)+'解放'].filter(Boolean).join('・');}
-    if(data.moveLimit)return [flipLabel,'⏱ '+data.moveLimit+'手以内'].filter(Boolean).join('・');
-    if(data.rules&&data.rules.targets)return [flipLabel,'🎯 指定色を目標チューブへ'].filter(Boolean).join('・');
-    if(data.rules&&data.rules.lockedTubes)return [flipLabel,'🔒 1色完成でチューブ解放'].filter(Boolean).join('・');
-    if(flipLabel)return flipLabel;
+    if(chain.length){var index=Math.min(chain.length,state.ruleState.chainIndex||0);return [special,index===chain.length?'🔗 連鎖 '+index+'/'+chain.length+' 完了':'🔗 連鎖 '+index+'/'+chain.length+'・'+colorName(chain[index].color)+'完成で筒'+(chain[index].tube+1)+'解放'].filter(Boolean).join('・');}
+    if(data.moveLimit)return [special,'⏱ '+data.moveLimit+'手以内'].filter(Boolean).join('・');
+    if(data.rules&&data.rules.targets)return [special,'🎯 指定色を目標チューブへ'].filter(Boolean).join('・');
+    if(data.rules&&data.rules.lockedTubes)return [special,'🔒 1色完成でチューブ解放'].filter(Boolean).join('・');
+    if(special)return special;
     if((data.capacity||4)===5)return '5 BALL TUBES';
     if(data.tubes.filter(function(t){return !t.length;}).length===1)return 'EMPTY TUBE ×1';
     return '';
@@ -39,7 +41,7 @@
   function searchOptions(maxVisited){return {maxVisited:maxVisited,rules:state.rules,ruleState:CRGame.cloneRuleState(state.ruleState)};}
   function loadStage(id){
     var data=CR_STAGES[id-1];if(!data||id>save.unlockedStage)return;
-    cancelWork();state.stageId=id;state.capacity=data.capacity||4;state.tubes=CRGame.clone(data.tubes);state.initialTubes=CRGame.clone(data.tubes);state.rules=data.rules||{};state.ruleState=CRGame.createRuleState(state.tubes,state.capacity,state.rules);state.initialRuleState=CRGame.cloneRuleState(state.ruleState);state.moveLimit=data.moveLimit||null;state.selectedTube=null;state.moveCount=0;state.history=[];state.isAnimating=false;state.isCleared=false;state.isStuck=false;state.isLimitFailed=false;tutorialStep=0;
+    cancelWork();state.stageId=id;state.capacity=data.capacity||4;state.tubes=CRGame.clone(data.tubes);state.initialTubes=CRGame.clone(data.tubes);state.rules=data.rules||{};state.ruleState=CRGame.createRuleState(state.tubes,state.capacity,state.rules);state.initialRuleState=CRGame.cloneRuleState(state.ruleState);state.moveLimit=data.moveLimit||null;state.selectedTube=null;state.moveCount=0;state.history=[];state.isAnimating=false;state.isChoosingDye=false;state.isCleared=false;state.isStuck=false;state.isLimitFailed=false;tutorialStep=0;
     $('#clear-modal').classList.remove('open');$('#stuck-modal').classList.remove('open');$('#limit-modal').classList.remove('open');
     var w=CRStage.worldFor(id),world=$('#world'),total=CR_STAGES.length,done=worldCompletion(w);world.className='world '+w.key;world.style.setProperty('--gray',(100-(done.total?done.count/done.total*100:0))+'%');$('#world-name').textContent=w.name;$('#stage-number').textContent=id;$('#stage-total').textContent=total;$('#rule-chip').textContent=stageRuleLabel(data);$('.level-progress').setAttribute('aria-label','全'+total+'レベル中、現在レベル'+id);
     render();show('game-screen');updateTutorial();
@@ -47,7 +49,7 @@
   function makeTube(i){
     var tube=state.tubes[i],el=document.createElement('button'),locked=CRGame.isTubeLocked(state.rules,state.ruleState,i),chainStep=CRGame.chainStepForTube(state.rules,i),isLock=(state.rules.lockedTubes||[]).indexOf(i)>=0||!!chainStep,target=state.rules.targets&&state.rules.targets[i];
     el.className='tube capacity-'+state.capacity+(state.selectedTube===i?' selected':'')+(locked?' locked-tube':'')+(isLock&&!locked?' unlocked-tube':'')+(target?' target-tube target-'+target:'');el.dataset.index=i;
-    var label='チューブ '+(i+1)+'、ボール '+tube.length+'個';if(locked)label+='、ロック中';if(chainStep&&locked)label+='、連鎖'+(chainStep.index+1)+'段目、'+colorName(chainStep.color)+'完成で解放';if(target)label+='、目標 '+target;el.setAttribute('aria-label',label);if(locked)el.setAttribute('aria-disabled','true');
+    var label='チューブ '+(i+1)+'、ボール '+tube.length+'個',grayCount=tube.filter(function(color){return color==='gray';}).length;if(grayCount)label+='、無色球 '+grayCount+'個';if(tube[tube.length-1]==='gray')label+='、最上段は無色';if(locked)label+='、ロック中';if(chainStep&&locked)label+='、連鎖'+(chainStep.index+1)+'段目、'+colorName(chainStep.color)+'完成で解放';if(target)label+='、目標 '+colorName(target);el.setAttribute('aria-label',label);if(locked)el.setAttribute('aria-disabled','true');
     if(isLock){var lock=document.createElement('span');lock.className='lock-badge';lock.setAttribute('aria-hidden','true');lock.textContent=locked?'🔒':'🔓';el.appendChild(lock);}
     if(chainStep&&locked){var condition=document.createElement('span');condition.className='unlock-condition condition-'+chainStep.color;condition.textContent=(chainStep.index+1)+'段 '+colorName(chainStep.color);el.appendChild(condition);}
     if(target){var marker=document.createElement('span');marker.className='target-marker';marker.setAttribute('aria-hidden','true');marker.textContent='◎';el.appendChild(marker);}
@@ -57,12 +59,26 @@
   function updateCounters(){
     $('#move-count').textContent=state.moveCount;$('#best-count').textContent=save.bestMoves[state.stageId]?'BEST '+save.bestMoves[state.stageId]:'BEST —';$('#undo-btn').disabled=!state.history.length||state.isAnimating;
     var limit=$('#limit-count');if(state.moveLimit){limit.textContent='残り '+Math.max(0,state.moveLimit-state.moveCount)+'手';limit.classList.remove('hidden');}else{limit.textContent='';limit.classList.add('hidden');}
-    var flip=$('#flip-btn'),flipLimit=state.rules.flipLimit||0;if(flipLimit){flip.classList.remove('hidden');flip.disabled=state.isAnimating||state.isCleared||!CRGame.canFlip(state.rules,state.ruleState);$('#flip-count').textContent='残り'+state.ruleState.flipsRemaining+'回・SIDE '+(state.ruleState.isFlipped?'B':'A');flip.setAttribute('aria-label','盤面を上下反転、残り'+state.ruleState.flipsRemaining+'回、現在SIDE '+(state.ruleState.isFlipped?'B':'A'));}else{flip.classList.add('hidden');flip.disabled=true;}
+    var forgeArea=$('#forge-area'),forge=$('#forge-btn'),forgeLimit=state.rules.forgeLimit||0;if(forgeLimit){forgeArea.classList.remove('hidden');forge.disabled=state.isAnimating||state.isCleared||state.ruleState.forgeRemaining<=0;$('#forge-count').textContent='残り'+state.ruleState.forgeRemaining+'回';forge.setAttribute('aria-label','選択した無色球を染色、残り'+state.ruleState.forgeRemaining+'回');}else{forgeArea.classList.add('hidden');forge.disabled=true;closeForgePicker();}
+    var flip=$('#flip-btn'),flipLimit=state.rules.flipLimit||0;if(flipLimit){flip.classList.remove('hidden');flip.disabled=state.isAnimating||state.isChoosingDye||state.isCleared||!CRGame.canFlip(state.rules,state.ruleState);$('#flip-count').textContent='残り'+state.ruleState.flipsRemaining+'回・SIDE '+(state.ruleState.isFlipped?'B':'A');flip.setAttribute('aria-label','盤面を上下反転、残り'+state.ruleState.flipsRemaining+'回、現在SIDE '+(state.ruleState.isFlipped?'B':'A'));}else{flip.classList.add('hidden');flip.disabled=true;}
   }
   function updateSelection(previous){if(previous!==null&&board.children[previous])board.children[previous].classList.remove('selected');if(state.selectedTube!==null&&board.children[state.selectedTube])board.children[state.selectedTube].classList.add('selected');}
   function updateTube(i){var old=board.children[i];if(old)board.replaceChild(makeTube(i),old);}
   function render(){board.innerHTML='';board.classList.toggle('capacity-5',state.capacity===5);board.classList.toggle('side-b',!!state.ruleState.isFlipped);state.tubes.forEach(function(_,i){board.appendChild(makeTube(i));});updateCounters();var data=CR_STAGES[state.stageId-1];if(data)$('#rule-chip').textContent=stageRuleLabel(data);}
-  function updateTutorial(){var t=$('#tutorial'),icon=t.querySelector('span'),text=t.querySelector('b'),help=t.querySelector('small');if(state.stageId===1&&!save.tutorialCompleted){t.classList.remove('hidden');icon.textContent='☝';text.textContent=tutorialStep?'移動先の筒をタップ':'この筒をタップ';help.textContent='空の筒か同じ色の上へ1個移動しよう';}else if(state.stageId===61&&state.ruleState.flipsUsed===0){t.classList.remove('hidden');icon.textContent='↕';text.textContent='新操作 FLIP';help.textContent=state.moveCount?'FLIPで底と上を入れ替えよう':'まず青を空の筒へ1個移動';}else t.classList.add('hidden');}
+  function updateTutorial(){var t=$('#tutorial'),icon=t.querySelector('span'),text=t.querySelector('b'),help=t.querySelector('small'),selected=state.selectedTube===null?null:state.tubes[state.selectedTube];if(state.stageId===1&&!save.tutorialCompleted){t.classList.remove('hidden');icon.textContent='☝';text.textContent=tutorialStep?'移動先の筒をタップ':'この筒をタップ';help.textContent='空の筒か同じ色の上へ1個移動しよう';}else if(state.stageId===61&&state.ruleState.flipsUsed===0){t.classList.remove('hidden');icon.textContent='↕';text.textContent='新操作 FLIP';help.textContent=state.moveCount?'FLIPで底と上を入れ替えよう':'まず青を空の筒へ1個移動';}else if(state.stageId===66&&state.ruleState.dyesUsed===0){t.classList.remove('hidden');icon.textContent='⚗';text.textContent='新操作 COLOR FORGE';if(state.isChoosingDye)help.textContent='赤に染める結果を確認して決定';else if(selected&&selected[selected.length-1]==='gray')help.textContent='COLOR FORGEをタップ';else if(state.moveCount===0)help.textContent='無色球「?」を空の筒へ移動';else help.textContent='トップの無色球「?」を選択';}else t.classList.add('hidden');}
+  function openForge(){
+    if(state.isAnimating||state.isCleared||state.isLimitFailed||!state.rules.forgeLimit)return;clearHint();
+    var tube=state.selectedTube;if(tube===null||!state.tubes[tube].length||state.tubes[tube][state.tubes[tube].length-1]!=='gray'){if(tube!==null)invalid(tube);else CRSound.invalid();toast('トップの無色球「?」を選んでください');return;}
+    var choices=CRGame.dyeChoices(state.tubes,tube,state.rules,state.ruleState);if(!choices.length){invalid(tube);toast('この無色球は染色できません');return;}
+    cancelSolve();state.isChoosingDye=true;var options=$('#forge-options'),needs=CRGame.dyeNeeds(state.tubes,state.rules);options.innerHTML='';choices.forEach(function(color){var button=document.createElement('button'),name=document.createElement('b'),detail=document.createElement('small'),needed=needs[color]||0,stock=Math.max(0,state.rules.dyeStock[color]-(state.ruleState.dyeUsed[color]||0));button.className='forge-color '+color;button.dataset.color=color;name.textContent=colorName(color)+'に染める';detail.textContent=needed?'完成にあと'+needed+'・顔料'+stock:'完成数は充足・顔料'+stock;button.setAttribute('aria-label',colorName(color)+'に染める。'+detail.textContent);button.appendChild(name);button.appendChild(detail);button.onclick=function(){dyeSelected(color);};options.appendChild(button);});
+    $('#forge-picker').classList.remove('hidden');$('#forge-btn').setAttribute('aria-expanded','true');updateCounters();updateTutorial();
+  }
+  function dyeSelected(color){
+    var tube=state.selectedTube;if(!state.isChoosingDye||tube===null||CRGame.dyeChoices(state.tubes,tube,state.rules,state.ruleState).indexOf(color)<0)return;
+    clearHint();cancelSolve();state.history.push({tubes:CRGame.clone(state.tubes),ruleState:CRGame.cloneRuleState(state.ruleState),moveCount:state.moveCount});if(state.history.length>100)state.history.shift();state.isAnimating=true;closeForgePicker();CRGame.applyDye(state.tubes,tube,color,state.capacity,state.rules,state.ruleState);state.moveCount++;state.selectedTube=null;render();var tubeEl=board.children[tube],balls=tubeEl.querySelectorAll('.ball'),ball=balls[state.tubes[tube].length-1];tubeEl.classList.add('forging-tube');if(ball)ball.classList.add('forging-ball');$('#forge-btn').classList.add('forging');CRSound.move();updateTutorial();toast('⚗ 無色球 → '+colorName(color));
+    var finished=false;function finish(){if(finished)return;finished=true;state.isAnimating=false;tubeEl.classList.remove('forging-tube');if(ball)ball.classList.remove('forging-ball');$('#forge-btn').classList.remove('forging');updateCounters();var data=CR_STAGES[state.stageId-1];if(data)$('#rule-chip').textContent=stageRuleLabel(data);if(CRGame.isCleared(state.tubes,state.capacity,state.rules))clearStage();else if(state.moveLimit&&state.moveCount>=state.moveLimit)showLimit();else checkSolvability();}
+    if(ball)ball.addEventListener('animationend',finish,{once:true});setTimeout(finish,460);
+  }
   function checkSolvability(){
     cancelSolve();if(state.isCleared||state.isLimitFailed)return;
     if(CRGame.isStuck(state.tubes,state.capacity,state.rules,state.ruleState)){showStuck();return;}
@@ -77,7 +93,7 @@
     solveTimer=setTimeout(slice,0);
   }
   function tapTube(i){
-    if(state.isAnimating||state.isCleared||state.isLimitFailed)return;clearHint();
+    if(state.isAnimating||state.isCleared||state.isLimitFailed)return;if(state.isChoosingDye){CRSound.invalid();toast('色を選ぶかキャンセルしてください');return;}clearHint();
     if(CRGame.isTubeLocked(state.rules,state.ruleState,i)){invalid(i);var step=CRGame.chainStepForTube(state.rules,i);toast(step?'🔒 '+colorName(step.color)+'を完成すると使えます':'🔒 1色完成すると使えます');return;}
     if(state.selectedTube===null){if(!state.tubes[i].length){invalid(i);return;}state.selectedTube=i;tutorialStep=1;updateSelection(null);updateTutorial();return;}
     if(state.selectedTube===i){var deselected=state.selectedTube;state.selectedTube=null;updateSelection(deselected);return;}
@@ -90,7 +106,7 @@
     fromEl.addEventListener('animationend',finish,{once:true});setTimeout(finish,220);
   }
   function flipBoard(){
-    if(state.isAnimating||state.isCleared||state.isLimitFailed)return;clearHint();
+    if(state.isAnimating||state.isChoosingDye||state.isCleared||state.isLimitFailed)return;clearHint();
     if(!CRGame.canFlip(state.rules,state.ruleState)){CRSound.invalid();toast('FLIPはもう使えません');return;}
     cancelSolve();var previous=state.selectedTube;state.selectedTube=null;updateSelection(previous);state.history.push({tubes:CRGame.clone(state.tubes),ruleState:CRGame.cloneRuleState(state.ruleState),moveCount:state.moveCount});if(state.history.length>100)state.history.shift();state.isAnimating=true;CRGame.applyFlip(state.tubes,state.rules,state.ruleState);state.moveCount++;render();board.classList.add('flipping');CRSound.move();updateTutorial();toast('↕ SIDE '+(state.ruleState.isFlipped?'B':'A')+'へ反転');
     var finished=false;function finish(){if(finished)return;finished=true;board.classList.remove('flipping');state.isAnimating=false;updateCounters();var data=CR_STAGES[state.stageId-1];if(data)$('#rule-chip').textContent=stageRuleLabel(data);if(CRGame.isCleared(state.tubes,state.capacity,state.rules))clearStage();else if(state.moveLimit&&state.moveCount>=state.moveLimit)showLimit();else checkSolvability();}
@@ -98,7 +114,7 @@
   }
   function invalid(i){CRSound.invalid();var el=board.children[i];if(!el)return;el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');if(navigator.vibrate&&save.vibration)navigator.vibrate(35);}
   function hideStuck(){state.isStuck=false;$('#stuck-modal').classList.remove('open');}
-  function showStuck(){clearHint();state.isStuck=true;var previous=state.selectedTube;state.selectedTube=null;updateSelection(previous);$('#stuck-modal').classList.add('open');}
+  function showStuck(){clearHint();closeForgePicker();state.isStuck=true;var previous=state.selectedTube;state.selectedTube=null;updateSelection(previous);$('#stuck-modal').classList.add('open');}
   function hideLimit(){state.isLimitFailed=false;$('#limit-modal').classList.remove('open');}
   function showLimit(){clearHint();state.isLimitFailed=true;var previous=state.selectedTube;state.selectedTube=null;updateSelection(previous);$('#limit-modal').classList.add('open');}
   function undo(){if(state.isAnimating||state.isCleared||!state.history.length)return;cancelWork();hideStuck();hideLimit();var old=state.history.pop();state.tubes=CRGame.clone(old.tubes);state.ruleState=CRGame.cloneRuleState(old.ruleState);state.moveCount=old.moveCount;state.selectedTube=null;render();updateTutorial();}
@@ -115,6 +131,7 @@
       if(result.status!=='solved'||!result.move){toast('HINTを計算できません');return;}
       if(state.moveLimit&&result.distance>state.moveLimit-state.moveCount)toast('残り手数ではクリアできません');
       if(result.move.type==='flip'){var flip=$('#flip-btn');flip.classList.add('hint-flip');toast('HINT：↕ FLIP');setTimeout(function(){if(generation===solveGeneration)flip.classList.remove('hint-flip');},700);return;}
+      if(result.move.type==='dye'){var dyeTube=board.children[result.move.tube],forge=$('#forge-btn');dyeTube.classList.add('hint-from');forge.classList.add('hint-forge');toast('HINT：筒'+(result.move.tube+1)+'の無色球 → '+colorName(result.move.color));setTimeout(function(){if(generation===solveGeneration){dyeTube.classList.remove('hint-from');forge.classList.remove('hint-forge');}},700);return;}
       var a=board.children[result.move.from],b=board.children[result.move.to];a.classList.add('hint-from');hintTimer=setTimeout(function(){if(generation===solveGeneration)b.classList.add('hint-to');},120);setTimeout(function(){if(generation===solveGeneration){a.classList.remove('hint-from');b.classList.remove('hint-to');}},650);
     }
     solveTimer=setTimeout(slice,0);
@@ -123,6 +140,6 @@
   function clearStage(){cancelWork();state.isCleared=true;var total=CR_STAGES.length;save.clearedStages.indexOf(state.stageId)<0&&save.clearedStages.push(state.stageId);if(state.stageId<total)save.unlockedStage=Math.max(save.unlockedStage,state.stageId+1);var best=save.bestMoves[state.stageId];if(!best||state.moveCount<best)save.bestMoves[state.stageId]=state.moveCount;persist();$$('.tube').forEach(function(t){t.classList.add('complete');});CRSound.clear();confetti();$('#result-moves').textContent=state.moveCount;$('#result-best').textContent=save.bestMoves[state.stageId];$('#next-btn').textContent=state.stageId===total?'ALL STAGES CLEAR':'NEXT STAGE';setTimeout(function(){$('#clear-modal').classList.add('open');},850);}
   function toast(s){var t=$('#toast');t.textContent=s;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1400);}
 
-  $('#play-btn').onclick=function(){loadStage(Math.min(save.unlockedStage,CR_STAGES.length));};$('#select-btn').onclick=function(){buildSelect();show('select-screen');};$$('.back-title').forEach(function(b){b.onclick=function(){cancelWork();show('title-screen');};});$('#home-btn').onclick=function(){if(state.isAnimating)return;cancelWork();buildSelect();show('select-screen');};$('#undo-btn').onclick=undo;$('#restart-btn').onclick=restart;$('#flip-btn').onclick=flipBoard;$('#stuck-undo-btn').onclick=undo;$('#stuck-restart-btn').onclick=restart;$('#limit-undo-btn').onclick=undo;$('#limit-restart-btn').onclick=restart;$('#hint-btn').onclick=hint;$('#replay-btn').onclick=restart;$('#modal-select-btn').onclick=function(){cancelWork();buildSelect();show('select-screen');};$('#next-btn').onclick=function(){if(state.stageId<CR_STAGES.length)loadStage(state.stageId+1);else{buildSelect();show('select-screen');$('#clear-modal').classList.remove('open');}};
-  app.loadStage=loadStage;app.undo=undo;app.restart=restart;app.flip=flipBoard;app.hint=hint;app.complete=clearStage;buildSelect();
+  $('#play-btn').onclick=function(){loadStage(Math.min(save.unlockedStage,CR_STAGES.length));};$('#select-btn').onclick=function(){buildSelect();show('select-screen');};$$('.back-title').forEach(function(b){b.onclick=function(){cancelWork();show('title-screen');};});$('#home-btn').onclick=function(){if(state.isAnimating)return;cancelWork();buildSelect();show('select-screen');};$('#undo-btn').onclick=undo;$('#restart-btn').onclick=restart;$('#forge-btn').onclick=openForge;$('#forge-cancel-btn').onclick=function(){closeForgePicker();updateCounters();updateTutorial();};$('#flip-btn').onclick=flipBoard;$('#stuck-undo-btn').onclick=undo;$('#stuck-restart-btn').onclick=restart;$('#limit-undo-btn').onclick=undo;$('#limit-restart-btn').onclick=restart;$('#hint-btn').onclick=hint;$('#replay-btn').onclick=restart;$('#modal-select-btn').onclick=function(){cancelWork();buildSelect();show('select-screen');};$('#next-btn').onclick=function(){if(state.stageId<CR_STAGES.length)loadStage(state.stageId+1);else{buildSelect();show('select-screen');$('#clear-modal').classList.remove('open');}};
+  app.loadStage=loadStage;app.undo=undo;app.restart=restart;app.forge=openForge;app.flip=flipBoard;app.hint=hint;app.complete=clearStage;buildSelect();
 }());

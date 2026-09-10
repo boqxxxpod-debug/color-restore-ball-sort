@@ -53,3 +53,19 @@
 @keyframes flipBoard{0%{transform:rotateX(0) scale(1);opacity:1}45%{transform:rotateX(88deg) scale(.96);opacity:.25}55%{transform:rotateX(-88deg) scale(.96);opacity:.25}100%{transform:rotateX(0) scale(1);opacity:1}}
 @keyframes flipHint{50%{transform:translateY(-4px) scale(1.02);box-shadow:0 0 0 5px #ffe66f88,0 12px 26px #3a286966}}
 @media(max-width:370px){.flip-control{grid-template-columns:38px 1fr auto;min-height:50px;padding:5px 10px}.flip-control>span{font-size:27px}.flip-control>b{font-size:15px}.flip-control small{font-size:9px}}
+
+/* COLOR FORGE makes an explicit, reversible color choice for one gray ball. */
+.world.forge{background:linear-gradient(#182342 0 43%,#316a73 43% 68%,#162c3c 68%)}
+.forge .sun{background:#ffedb0;box-shadow:0 0 42px #77ffe4}
+.forge .cloud{opacity:.16}.forge .scenery{height:48%;background:radial-gradient(circle at 16% 40%,#59ffe299 0 3px,transparent 4px),radial-gradient(circle at 76% 24%,#ffcf6b99 0 4px,transparent 5px),linear-gradient(100deg,transparent 0 22%,#72f4db55 23% 27%,transparent 28% 61%,#ffd77b55 62% 67%,transparent 68%);background-size:80px 72px,110px 94px,auto}
+.ball.gray{--ball:#eef3f7;--dark:#8996a5;outline:2px dashed #59697c;outline-offset:-3px}
+.ball.gray:after{content:"?";position:absolute;inset:0;display:grid;place-items:center;color:#455568;font-size:18px;font-style:normal;font-weight:950;text-shadow:0 1px #fff}
+.forge-area{width:100%;margin-top:10px}
+.forge-control{display:grid;grid-template-columns:46px 1fr auto;align-items:center;width:100%;min-height:54px;padding:7px 14px;border:2px solid #38c8b4;border-radius:17px;background:linear-gradient(135deg,#123d4c,#197768);color:#fff;box-shadow:0 8px 20px #174c5540;text-align:left}
+.forge-control>span{grid-row:1/3;font-size:29px;text-align:center}.forge-control>b{font-size:16px;letter-spacing:1.5px}.forge-control small{grid-column:3;grid-row:1/3;padding:5px 8px;border-radius:999px;background:#fff2;font-size:10px;font-weight:900;white-space:nowrap}.forge-control:disabled{opacity:.48;box-shadow:none}.forge-control.hint-forge{animation:forgeHint .7s ease}.forge-control.forging{animation:forgePulse .4s ease}
+.forge-picker{margin-top:7px;padding:10px;border:2px solid #8cebdd;border-radius:16px;background:#f5fffc;box-shadow:0 8px 20px #174c5530;text-align:center}.forge-picker>b,.forge-picker>small{display:block}.forge-picker>b{font-size:14px}.forge-picker>small{margin:2px 0 8px;color:#55706e;font-size:9px}.forge-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.forge-color{display:grid;grid-template-columns:25px 1fr;grid-template-rows:auto auto;align-items:center;min-height:48px;padding:5px 8px;border:1px solid #d2e9e5;border-radius:12px;background:#fff;color:#26384a;text-align:left;box-shadow:0 3px 9px #274e4a18}.forge-color:before{content:"";grid-row:1/3;width:21px;height:21px;border-radius:50%;background:radial-gradient(circle at 30% 25%,#fff9 0 10%,var(--ball) 40%,var(--dark) 90%);box-shadow:0 0 0 1px #20344925}.forge-color b{font-size:12px}.forge-color small{font-size:8px;color:#617575}.forge-cancel{min-height:40px;margin-top:7px;padding:5px 14px;background:transparent;color:#607174;font-size:11px;font-weight:800}
+.ball.forging-ball{z-index:6;animation:forgeBall .4s ease}.tube.forging-tube{filter:drop-shadow(0 0 12px #8cffe3)}
+@keyframes forgeBall{45%{transform:translateY(-35px) scale(.72);filter:brightness(1.8)}75%{transform:translateY(-8px) scale(1.18)}}
+@keyframes forgePulse{50%{box-shadow:0 0 0 5px #72f4db88,0 12px 28px #174c5566}}
+@keyframes forgeHint{50%{transform:translateY(-4px) scale(1.02);box-shadow:0 0 0 5px #ffe66f88,0 12px 26px #174c5566}}
+@media(max-width:370px){.forge-control{grid-template-columns:38px 1fr auto;min-height:50px;padding:5px 10px}.forge-control>span{font-size:25px}.forge-control>b{font-size:14px}.forge-control small{font-size:9px}.forge-picker{padding:8px}.forge-color{min-height:44px;padding:4px 6px}}
