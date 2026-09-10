@@ -41,3 +41,15 @@
 .challenge .sun{background:#ffbd4a;box-shadow:0 0 42px #ff8b42}
 .challenge .cloud{opacity:.25}.challenge .scenery{height:46%;background:radial-gradient(circle at 15% 30%,#fff 0 2px,transparent 3px),radial-gradient(circle at 68% 18%,#fff 0 2px,transparent 3px),radial-gradient(circle at 82% 55%,#ffc96b 0 3px,transparent 4px);background-size:90px 80px,120px 105px,145px 115px}
 .world-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+
+/* FLIP LAB adds one deliberate board action without shrinking the core controls. */
+.world.flip{background:linear-gradient(#1b265a 0 42%,#6847a6 42% 67%,#17254a 67%)}
+.flip .sun{background:#d8fbff;box-shadow:0 0 42px #8eefff}
+.flip .cloud{opacity:.2}.flip .scenery{height:48%;background:linear-gradient(90deg,transparent 0 8%,#78f5e466 9% 12%,transparent 13% 28%,#cba0ff66 29% 35%,transparent 36% 54%,#78f5e466 55% 61%,transparent 62%)}
+.flip-control{display:grid;grid-template-columns:46px 1fr auto;align-items:center;width:100%;min-height:54px;margin-top:10px;padding:7px 14px;border:2px solid #8b6fe7;border-radius:17px;background:linear-gradient(135deg,#302461,#5840a0);color:#fff;box-shadow:0 8px 20px #3a286940;text-align:left}
+.flip-control>span{grid-row:1/3;font-size:32px;font-weight:950;text-align:center}.flip-control>b{font-size:17px;letter-spacing:2px}.flip-control small{grid-column:3;grid-row:1/3;padding:5px 8px;border-radius:999px;background:#fff2;font-size:10px;font-weight:900;white-space:nowrap}.flip-control:disabled{opacity:.48;box-shadow:none}.flip-control.hint-flip{animation:flipHint .7s ease}
+.tube-board.flipping{pointer-events:none;transform-style:preserve-3d;animation:flipBoard .46s cubic-bezier(.45,0,.2,1)}
+.tube-board.side-b .tube:before{background:#cabdffb8;border-color:#f4efff}
+@keyframes flipBoard{0%{transform:rotateX(0) scale(1);opacity:1}45%{transform:rotateX(88deg) scale(.96);opacity:.25}55%{transform:rotateX(-88deg) scale(.96);opacity:.25}100%{transform:rotateX(0) scale(1);opacity:1}}
+@keyframes flipHint{50%{transform:translateY(-4px) scale(1.02);box-shadow:0 0 0 5px #ffe66f88,0 12px 26px #3a286966}}
+@media(max-width:370px){.flip-control{grid-template-columns:38px 1fr auto;min-height:50px;padding:5px 10px}.flip-control>span{font-size:27px}.flip-control>b{font-size:15px}.flip-control small{font-size:9px}}

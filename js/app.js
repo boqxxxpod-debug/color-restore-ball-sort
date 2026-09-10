@@ -3,7 +3,7 @@
   var $=function(s){return document.querySelector(s);};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s));};
   var save=CRStorage.load();
-  var state={stageId:1,capacity:4,tubes:[],initialTubes:[],rules:{},ruleState:{locksOpen:true,chainIndex:0},initialRuleState:{locksOpen:true,chainIndex:0},moveLimit:null,selectedTube:null,moveCount:0,history:[],isAnimating:false,isCleared:false,isStuck:false,isLimitFailed:false};
+  var state={stageId:1,capacity:4,tubes:[],initialTubes:[],rules:{},ruleState:{locksOpen:true,chainIndex:0,flipsRemaining:0,flipsUsed:0,isFlipped:false},initialRuleState:{locksOpen:true,chainIndex:0,flipsRemaining:0,flipsUsed:0,isFlipped:false},moveLimit:null,selectedTube:null,moveCount:0,history:[],isAnimating:false,isCleared:false,isStuck:false,isLimitFailed:false};
   var app=window.ColorRestore={save:save,state:state};
   var screens=$$('.screen'),board=$('#tube-board'),tutorialStep=0,hintTimer,solveTimer,solveGeneration=0;
 
@@ -24,11 +24,13 @@
   function cancelWork(){cancelSolve();clearHint();}
   function colorName(color){return {red:'赤',blue:'青',yellow:'黄',green:'緑',purple:'紫',orange:'橙',cyan:'水',pink:'桃'}[color]||color;}
   function stageRuleLabel(data){
+    var flip=data.rules&&data.rules.flipLimit||0,flipLabel=flip?'↕ FLIP 残り'+state.ruleState.flipsRemaining+'/'+flip+'・SIDE '+(state.ruleState.isFlipped?'B':'A'):'';
     var chain=data.rules&&data.rules.unlockChain||[];
-    if(chain.length){var index=Math.min(chain.length,state.ruleState.chainIndex||0);return index===chain.length?'🔗 連鎖 '+index+'/'+chain.length+' 完了':'🔗 連鎖 '+index+'/'+chain.length+'・'+colorName(chain[index].color)+'完成で筒'+(chain[index].tube+1)+'解放';}
-    if(data.moveLimit)return '⏱ '+data.moveLimit+'手以内';
-    if(data.rules&&data.rules.targets)return '🎯 指定色を目標チューブへ';
-    if(data.rules&&data.rules.lockedTubes)return '🔒 1色完成でチューブ解放';
+    if(chain.length){var index=Math.min(chain.length,state.ruleState.chainIndex||0);return [flipLabel,index===chain.length?'🔗 連鎖 '+index+'/'+chain.length+' 完了':'🔗 連鎖 '+index+'/'+chain.length+'・'+colorName(chain[index].color)+'完成で筒'+(chain[index].tube+1)+'解放'].filter(Boolean).join('・');}
+    if(data.moveLimit)return [flipLabel,'⏱ '+data.moveLimit+'手以内'].filter(Boolean).join('・');
+    if(data.rules&&data.rules.targets)return [flipLabel,'🎯 指定色を目標チューブへ'].filter(Boolean).join('・');
+    if(data.rules&&data.rules.lockedTubes)return [flipLabel,'🔒 1色完成でチューブ解放'].filter(Boolean).join('・');
+    if(flipLabel)return flipLabel;
     if((data.capacity||4)===5)return '5 BALL TUBES';
     if(data.tubes.filter(function(t){return !t.length;}).length===1)return 'EMPTY TUBE ×1';
     return '';
@@ -55,11 +57,12 @@
   function updateCounters(){
     $('#move-count').textContent=state.moveCount;$('#best-count').textContent=save.bestMoves[state.stageId]?'BEST '+save.bestMoves[state.stageId]:'BEST —';$('#undo-btn').disabled=!state.history.length||state.isAnimating;
     var limit=$('#limit-count');if(state.moveLimit){limit.textContent='残り '+Math.max(0,state.moveLimit-state.moveCount)+'手';limit.classList.remove('hidden');}else{limit.textContent='';limit.classList.add('hidden');}
+    var flip=$('#flip-btn'),flipLimit=state.rules.flipLimit||0;if(flipLimit){flip.classList.remove('hidden');flip.disabled=state.isAnimating||state.isCleared||!CRGame.canFlip(state.rules,state.ruleState);$('#flip-count').textContent='残り'+state.ruleState.flipsRemaining+'回・SIDE '+(state.ruleState.isFlipped?'B':'A');flip.setAttribute('aria-label','盤面を上下反転、残り'+state.ruleState.flipsRemaining+'回、現在SIDE '+(state.ruleState.isFlipped?'B':'A'));}else{flip.classList.add('hidden');flip.disabled=true;}
   }
   function updateSelection(previous){if(previous!==null&&board.children[previous])board.children[previous].classList.remove('selected');if(state.selectedTube!==null&&board.children[state.selectedTube])board.children[state.selectedTube].classList.add('selected');}
   function updateTube(i){var old=board.children[i];if(old)board.replaceChild(makeTube(i),old);}
-  function render(){board.innerHTML='';board.classList.toggle('capacity-5',state.capacity===5);state.tubes.forEach(function(_,i){board.appendChild(makeTube(i));});updateCounters();var data=CR_STAGES[state.stageId-1];if(data)$('#rule-chip').textContent=stageRuleLabel(data);}
-  function updateTutorial(){var t=$('#tutorial');if(state.stageId===1&&!save.tutorialCompleted){t.classList.remove('hidden');t.querySelector('b').textContent=tutorialStep?'移動先の筒をタップ':'この筒をタップ';}else t.classList.add('hidden');}
+  function render(){board.innerHTML='';board.classList.toggle('capacity-5',state.capacity===5);board.classList.toggle('side-b',!!state.ruleState.isFlipped);state.tubes.forEach(function(_,i){board.appendChild(makeTube(i));});updateCounters();var data=CR_STAGES[state.stageId-1];if(data)$('#rule-chip').textContent=stageRuleLabel(data);}
+  function updateTutorial(){var t=$('#tutorial'),icon=t.querySelector('span'),text=t.querySelector('b'),help=t.querySelector('small');if(state.stageId===1&&!save.tutorialCompleted){t.classList.remove('hidden');icon.textContent='☝';text.textContent=tutorialStep?'移動先の筒をタップ':'この筒をタップ';help.textContent='空の筒か同じ色の上へ1個移動しよう';}else if(state.stageId===61&&state.ruleState.flipsUsed===0){t.classList.remove('hidden');icon.textContent='↕';text.textContent='新操作 FLIP';help.textContent=state.moveCount?'FLIPで底と上を入れ替えよう':'まず青を空の筒へ1個移動';}else t.classList.add('hidden');}
   function checkSolvability(){
     cancelSolve();if(state.isCleared||state.isLimitFailed)return;
     if(CRGame.isStuck(state.tubes,state.capacity,state.rules,state.ruleState)){showStuck();return;}
@@ -86,13 +89,20 @@
     function finish(){if(finished)return;finished=true;state.isAnimating=false;fromEl.classList.remove('pouring');toEl.classList.remove('receiving');updateCounters();if(CRGame.isCleared(state.tubes,state.capacity,state.rules))clearStage();else if(state.moveLimit&&state.moveCount>=state.moveLimit)showLimit();else checkSolvability();}
     fromEl.addEventListener('animationend',finish,{once:true});setTimeout(finish,220);
   }
+  function flipBoard(){
+    if(state.isAnimating||state.isCleared||state.isLimitFailed)return;clearHint();
+    if(!CRGame.canFlip(state.rules,state.ruleState)){CRSound.invalid();toast('FLIPはもう使えません');return;}
+    cancelSolve();var previous=state.selectedTube;state.selectedTube=null;updateSelection(previous);state.history.push({tubes:CRGame.clone(state.tubes),ruleState:CRGame.cloneRuleState(state.ruleState),moveCount:state.moveCount});if(state.history.length>100)state.history.shift();state.isAnimating=true;CRGame.applyFlip(state.tubes,state.rules,state.ruleState);state.moveCount++;render();board.classList.add('flipping');CRSound.move();updateTutorial();toast('↕ SIDE '+(state.ruleState.isFlipped?'B':'A')+'へ反転');
+    var finished=false;function finish(){if(finished)return;finished=true;board.classList.remove('flipping');state.isAnimating=false;updateCounters();var data=CR_STAGES[state.stageId-1];if(data)$('#rule-chip').textContent=stageRuleLabel(data);if(CRGame.isCleared(state.tubes,state.capacity,state.rules))clearStage();else if(state.moveLimit&&state.moveCount>=state.moveLimit)showLimit();else checkSolvability();}
+    board.addEventListener('animationend',finish,{once:true});setTimeout(finish,520);
+  }
   function invalid(i){CRSound.invalid();var el=board.children[i];if(!el)return;el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');if(navigator.vibrate&&save.vibration)navigator.vibrate(35);}
   function hideStuck(){state.isStuck=false;$('#stuck-modal').classList.remove('open');}
   function showStuck(){clearHint();state.isStuck=true;var previous=state.selectedTube;state.selectedTube=null;updateSelection(previous);$('#stuck-modal').classList.add('open');}
   function hideLimit(){state.isLimitFailed=false;$('#limit-modal').classList.remove('open');}
   function showLimit(){clearHint();state.isLimitFailed=true;var previous=state.selectedTube;state.selectedTube=null;updateSelection(previous);$('#limit-modal').classList.add('open');}
-  function undo(){if(state.isAnimating||state.isCleared||!state.history.length)return;cancelWork();hideStuck();hideLimit();var old=state.history.pop();state.tubes=CRGame.clone(old.tubes);state.ruleState=CRGame.cloneRuleState(old.ruleState);state.moveCount=old.moveCount;state.selectedTube=null;render();}
-  function restart(){if(state.isAnimating)return;cancelWork();hideStuck();hideLimit();state.tubes=CRGame.clone(state.initialTubes);state.ruleState=CRGame.cloneRuleState(state.initialRuleState);state.moveCount=0;state.history=[];state.selectedTube=null;state.isCleared=false;state.isStuck=false;state.isLimitFailed=false;$('#clear-modal').classList.remove('open');render();}
+  function undo(){if(state.isAnimating||state.isCleared||!state.history.length)return;cancelWork();hideStuck();hideLimit();var old=state.history.pop();state.tubes=CRGame.clone(old.tubes);state.ruleState=CRGame.cloneRuleState(old.ruleState);state.moveCount=old.moveCount;state.selectedTube=null;render();updateTutorial();}
+  function restart(){if(state.isAnimating)return;cancelWork();hideStuck();hideLimit();state.tubes=CRGame.clone(state.initialTubes);state.ruleState=CRGame.cloneRuleState(state.initialRuleState);state.moveCount=0;state.history=[];state.selectedTube=null;state.isCleared=false;state.isStuck=false;state.isLimitFailed=false;$('#clear-modal').classList.remove('open');render();updateTutorial();}
   function hint(){
     if(state.isAnimating||state.isCleared||state.isLimitFailed)return;
     cancelWork();var previous=state.selectedTube;state.selectedTube=null;updateSelection(previous);
@@ -104,6 +114,7 @@
       if(result.status==='searching'&&Date.now()-started<1200){solveTimer=setTimeout(slice,0);return;}
       if(result.status!=='solved'||!result.move){toast('HINTを計算できません');return;}
       if(state.moveLimit&&result.distance>state.moveLimit-state.moveCount)toast('残り手数ではクリアできません');
+      if(result.move.type==='flip'){var flip=$('#flip-btn');flip.classList.add('hint-flip');toast('HINT：↕ FLIP');setTimeout(function(){if(generation===solveGeneration)flip.classList.remove('hint-flip');},700);return;}
       var a=board.children[result.move.from],b=board.children[result.move.to];a.classList.add('hint-from');hintTimer=setTimeout(function(){if(generation===solveGeneration)b.classList.add('hint-to');},120);setTimeout(function(){if(generation===solveGeneration){a.classList.remove('hint-from');b.classList.remove('hint-to');}},650);
     }
     solveTimer=setTimeout(slice,0);
@@ -112,6 +123,6 @@
   function clearStage(){cancelWork();state.isCleared=true;var total=CR_STAGES.length;save.clearedStages.indexOf(state.stageId)<0&&save.clearedStages.push(state.stageId);if(state.stageId<total)save.unlockedStage=Math.max(save.unlockedStage,state.stageId+1);var best=save.bestMoves[state.stageId];if(!best||state.moveCount<best)save.bestMoves[state.stageId]=state.moveCount;persist();$$('.tube').forEach(function(t){t.classList.add('complete');});CRSound.clear();confetti();$('#result-moves').textContent=state.moveCount;$('#result-best').textContent=save.bestMoves[state.stageId];$('#next-btn').textContent=state.stageId===total?'ALL STAGES CLEAR':'NEXT STAGE';setTimeout(function(){$('#clear-modal').classList.add('open');},850);}
   function toast(s){var t=$('#toast');t.textContent=s;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1400);}
 
-  $('#play-btn').onclick=function(){loadStage(Math.min(save.unlockedStage,CR_STAGES.length));};$('#select-btn').onclick=function(){buildSelect();show('select-screen');};$$('.back-title').forEach(function(b){b.onclick=function(){cancelWork();show('title-screen');};});$('#home-btn').onclick=function(){if(state.isAnimating)return;cancelWork();buildSelect();show('select-screen');};$('#undo-btn').onclick=undo;$('#restart-btn').onclick=restart;$('#stuck-undo-btn').onclick=undo;$('#stuck-restart-btn').onclick=restart;$('#limit-undo-btn').onclick=undo;$('#limit-restart-btn').onclick=restart;$('#hint-btn').onclick=hint;$('#replay-btn').onclick=restart;$('#modal-select-btn').onclick=function(){cancelWork();buildSelect();show('select-screen');};$('#next-btn').onclick=function(){if(state.stageId<CR_STAGES.length)loadStage(state.stageId+1);else{buildSelect();show('select-screen');$('#clear-modal').classList.remove('open');}};
-  app.loadStage=loadStage;app.undo=undo;app.restart=restart;app.hint=hint;app.complete=clearStage;buildSelect();
+  $('#play-btn').onclick=function(){loadStage(Math.min(save.unlockedStage,CR_STAGES.length));};$('#select-btn').onclick=function(){buildSelect();show('select-screen');};$$('.back-title').forEach(function(b){b.onclick=function(){cancelWork();show('title-screen');};});$('#home-btn').onclick=function(){if(state.isAnimating)return;cancelWork();buildSelect();show('select-screen');};$('#undo-btn').onclick=undo;$('#restart-btn').onclick=restart;$('#flip-btn').onclick=flipBoard;$('#stuck-undo-btn').onclick=undo;$('#stuck-restart-btn').onclick=restart;$('#limit-undo-btn').onclick=undo;$('#limit-restart-btn').onclick=restart;$('#hint-btn').onclick=hint;$('#replay-btn').onclick=restart;$('#modal-select-btn').onclick=function(){cancelWork();buildSelect();show('select-screen');};$('#next-btn').onclick=function(){if(state.stageId<CR_STAGES.length)loadStage(state.stageId+1);else{buildSelect();show('select-screen');$('#clear-modal').classList.remove('open');}};
+  app.loadStage=loadStage;app.undo=undo;app.restart=restart;app.flip=flipBoard;app.hint=hint;app.complete=clearStage;buildSelect();
 }());

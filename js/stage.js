@@ -6,7 +6,8 @@
     {key:'city',name:'CITY',label:'City',start:21,end:30},
     {key:'aurora',name:'AURORA',label:'Aurora',start:31,end:40},
     {key:'crystal',name:'CRYSTAL',label:'Crystal',start:41,end:50},
-    {key:'challenge',name:'CHALLENGE',label:'Challenge',start:51,end:60}
+    {key:'challenge',name:'CHALLENGE',label:'Challenge',start:51,end:60},
+    {key:'flip',name:'FLIP LAB',label:'Flip Lab',start:61,end:65}
   ];
   function available(total){return worlds.filter(function(w){return w.start<=total;}).map(function(w){return {key:w.key,name:w.name,label:w.label,start:w.start,end:Math.min(w.end,total)};});}
   function worldFor(id){for(var i=0;i<worlds.length;i++)if(id>=worlds[i].start&&id<=worlds[i].end)return worlds[i];return worlds[worlds.length-1];}
