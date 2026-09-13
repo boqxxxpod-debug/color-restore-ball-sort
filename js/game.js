@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   function clone(t){return t.map(function(x){return x.slice();});}
-  function cloneRuleState(state){var used={},source=state&&state.dyeUsed||{};Object.keys(source).forEach(function(color){if(Number.isInteger(source[color])&&source[color]>0)used[color]=source[color];});return {locksOpen:!!(state&&state.locksOpen),chainIndex:Math.max(0,state&&Number.isInteger(state.chainIndex)?state.chainIndex:0),flipsRemaining:Math.max(0,state&&Number.isInteger(state.flipsRemaining)?state.flipsRemaining:0),flipsUsed:Math.max(0,state&&Number.isInteger(state.flipsUsed)?state.flipsUsed:0),isFlipped:!!(state&&state.isFlipped),forgeRemaining:Math.max(0,state&&Number.isInteger(state.forgeRemaining)?state.forgeRemaining:0),dyesUsed:Math.max(0,state&&Number.isInteger(state.dyesUsed)?state.dyesUsed:0),dyeUsed:used};}
+  function cloneRuleState(state){var used={},source=state&&state.dyeUsed||{},serveProgress=state&&Array.isArray(state.serveProgress)?state.serveProgress.map(function(value){return Math.max(0,Number.isInteger(value)?value:0);}):[];Object.keys(source).forEach(function(color){if(Number.isInteger(source[color])&&source[color]>0)used[color]=source[color];});return {locksOpen:!!(state&&state.locksOpen),chainIndex:Math.max(0,state&&Number.isInteger(state.chainIndex)?state.chainIndex:0),flipsRemaining:Math.max(0,state&&Number.isInteger(state.flipsRemaining)?state.flipsRemaining:0),flipsUsed:Math.max(0,state&&Number.isInteger(state.flipsUsed)?state.flipsUsed:0),isFlipped:!!(state&&state.isFlipped),forgeRemaining:Math.max(0,state&&Number.isInteger(state.forgeRemaining)?state.forgeRemaining:0),dyesUsed:Math.max(0,state&&Number.isInteger(state.dyesUsed)?state.dyesUsed:0),dyeUsed:used,serveProgress:serveProgress};}
   function topRun(tube){if(!tube.length)return 0;var c=tube[tube.length-1],n=0;for(var i=tube.length-1;i>=0&&tube[i]===c;i--)n++;return n;}
   function completeTube(tube,cap){return tube.length===cap&&tube[0]!=='gray'&&tube.every(function(c){return c===tube[0];});}
   function completedCount(tubes,cap){return tubes.reduce(function(n,tube){return n+(completeTube(tube,cap)?1:0);},0);}
@@ -22,13 +22,21 @@
   function portalForEntry(rules,index){var pairs=portalPairs(rules);for(var i=0;i<pairs.length;i++)if(pairs[i].entry===index)return pairs[i];return null;}
   function portalForTube(rules,index){var pairs=portalPairs(rules);for(var i=0;i<pairs.length;i++)if(pairs[i].entry===index||pairs[i].exit===index)return {entry:pairs[i].entry,exit:pairs[i].exit,symbol:pairs[i].symbol||String.fromCharCode(65+i),pairIndex:i,role:pairs[i].entry===index?'entry':'exit'};return null;}
   function portalExit(rules,index){var pair=portalForEntry(rules,index);return pair?pair.exit:-1;}
+  function validServeBatch(batch){return !!(batch&&typeof batch.target==='string'&&batch.target&&Array.isArray(batch.balls)&&batch.balls.every(function(color){return typeof color==='string'&&color;}));}
+  function serveLanes(rules){return rules&&Array.isArray(rules.serveLanes)?rules.serveLanes.filter(function(lane){return lane&&Number.isInteger(lane.tube)&&lane.tube>=0&&validServeBatch(lane.initial)&&(!lane.queue||Array.isArray(lane.queue)&&lane.queue.every(validServeBatch));}):[];}
+  function serveBatches(lane){return lane?[lane.initial].concat(Array.isArray(lane.queue)?lane.queue:[]):[];}
+  function serveStatus(rules,ruleState,laneIndex){var lane=serveLanes(rules)[laneIndex];if(!lane)return null;var batches=serveBatches(lane),served=Math.min(batches.length,Math.max(0,ruleState&&Array.isArray(ruleState.serveProgress)&&Number.isInteger(ruleState.serveProgress[laneIndex])?ruleState.serveProgress[laneIndex]:0));return {laneIndex:laneIndex,tube:lane.tube,symbol:lane.symbol||String.fromCharCode(65+laneIndex),served:served,total:batches.length,current:served<batches.length?batches[served]:null,waiting:batches.slice(served+1)};}
+  function serveForTube(rules,ruleState,index){var lanes=serveLanes(rules);for(var i=0;i<lanes.length;i++)if(lanes[i].tube===index)return serveStatus(rules,ruleState,i);return null;}
+  function serveTotal(rules){return serveLanes(rules).reduce(function(total,lane){return total+serveBatches(lane).length;},0);}
+  function servedCount(rules,ruleState){var lanes=serveLanes(rules);return lanes.reduce(function(total,lane,index){return total+Math.min(serveBatches(lane).length,Math.max(0,ruleState&&Array.isArray(ruleState.serveProgress)&&Number.isInteger(ruleState.serveProgress[index])?ruleState.serveProgress[index]:0));},0);}
+  function processServe(tubes,cap,rules,ruleState){var events=[],lanes=serveLanes(rules);if(!ruleState||!lanes.length)return events;if(!Array.isArray(ruleState.serveProgress))ruleState.serveProgress=[];lanes.forEach(function(lane,index){var batches=serveBatches(lane),served=Math.min(batches.length,Math.max(0,Number.isInteger(ruleState.serveProgress[index])?ruleState.serveProgress[index]:0)),batch=batches[served],tube=tubes[lane.tube];ruleState.serveProgress[index]=served;if(!batch||!tube||tube.length!==cap||!tube.every(function(color){return color===batch.target;}))return;var next=served+1;ruleState.serveProgress[index]=next;tubes[lane.tube]=next<batches.length?batches[next].balls.slice():[];events.push({laneIndex:index,tube:lane.tube,symbol:lane.symbol||String.fromCharCode(65+index),target:batch.target,served:next,total:batches.length,arrival:next<batches.length?batches[next]:null});});return events;}
   function dyeColors(rules){var order=['red','blue','yellow','green','purple','orange','cyan','pink'];return Object.keys(dyeStock(rules)).filter(function(color){return Number.isInteger(dyeStock(rules)[color])&&dyeStock(rules)[color]>0;}).sort(function(a,b){var ai=order.indexOf(a),bi=order.indexOf(b);return (ai<0?999:ai)-(bi<0?999:bi)||a.localeCompare(b);});}
   function colorCounts(tubes){var counts={};tubes.forEach(function(tube){tube.forEach(function(color){if(color!=='gray')counts[color]=(counts[color]||0)+1;});});return counts;}
   function dyeNeeds(tubes,rules){var counts=colorCounts(tubes),needs={};Object.keys(dyeGoals(rules)).forEach(function(color){var needed=Math.max(0,dyeGoals(rules)[color]-(counts[color]||0));if(needed)needs[color]=needed;});return needs;}
-  function hasSpecialRules(rules){return !!(rules&&(lockedTubes(rules).length||targetEntries(rules).length||unlockChain(rules).length||flipLimit(rules)||forgeLimit(rules)||portalPairs(rules).length));}
+  function hasSpecialRules(rules){return !!(rules&&(lockedTubes(rules).length||targetEntries(rules).length||unlockChain(rules).length||flipLimit(rules)||forgeLimit(rules)||portalPairs(rules).length||serveLanes(rules).length));}
   function createRuleState(tubes,cap,rules){
     var locks=lockedTubes(rules),threshold=rules&&rules.unlockAfterCompleted||1;
-    var state={locksOpen:!locks.length||completedCount(tubes,cap)>=threshold,chainIndex:0,flipsRemaining:flipLimit(rules),flipsUsed:0,isFlipped:false,forgeRemaining:forgeLimit(rules),dyesUsed:0,dyeUsed:{}};
+    var state={locksOpen:!locks.length||completedCount(tubes,cap)>=threshold,chainIndex:0,flipsRemaining:flipLimit(rules),flipsUsed:0,isFlipped:false,forgeRemaining:forgeLimit(rules),dyesUsed:0,dyeUsed:{},serveProgress:serveLanes(rules).map(function(){return 0;})};
     updateRuleState(tubes,cap,rules,state);return state;
   }
   function isTubeLocked(rules,ruleState,index){
@@ -37,10 +45,12 @@
   }
   function updateRuleState(tubes,cap,rules,ruleState){
     if(!ruleState)return;
+    var serveEvents=processServe(tubes,cap,rules,ruleState);
     if(!ruleState.locksOpen&&lockedTubes(rules).length&&completedCount(tubes,cap)>=(rules.unlockAfterCompleted||1))ruleState.locksOpen=true;
     var chain=unlockChain(rules),index=Math.max(0,ruleState.chainIndex||0);
     while(index<chain.length&&completedColor(tubes,cap,chain[index].color))index++;
     ruleState.chainIndex=index;
+    return serveEvents;
   }
   function legal(tubes,from,to,cap,rules,ruleState){
     if(from===to||!tubes[from]||!tubes[to]||!tubes[from].length||tubes[to].length>=cap)return false;
@@ -59,7 +69,8 @@
   }
   function canDye(tubes,rules,ruleState){for(var i=0;i<tubes.length;i++)if(dyeChoices(tubes,i,rules,ruleState).length)return true;return false;}
   function dye(tubes,index,color,cap,rules,ruleState){if(dyeChoices(tubes,index,rules,ruleState).indexOf(color)<0)return 0;tubes[index][tubes[index].length-1]=color;ruleState.forgeRemaining--;ruleState.dyesUsed=Math.max(0,Number.isInteger(ruleState.dyesUsed)?ruleState.dyesUsed:0)+1;if(!ruleState.dyeUsed||typeof ruleState.dyeUsed!=='object')ruleState.dyeUsed={};ruleState.dyeUsed[color]=(ruleState.dyeUsed[color]||0)+1;updateRuleState(tubes,cap,rules,ruleState);return 1;}
-  function cleared(tubes,cap,rules){
+  function cleared(tubes,cap,rules,ruleState){
+    if(serveLanes(rules).length)return servedCount(rules,ruleState)===serveTotal(rules);
     if(forgeLimit(rules)&&tubes.some(function(tube){return tube.indexOf('gray')>=0;}))return false;
     if(forgeLimit(rules)){
       var counts=colorCounts(tubes),goals=dyeGoals(rules),colors=Object.keys(counts).concat(Object.keys(goals));
@@ -70,22 +81,23 @@
     return targets.every(function(index){var tube=tubes[index],color=rules.targets[index];return tube&&tube.length===cap&&tube.every(function(c){return c===color;});});
   }
   function stuck(tubes,cap,rules,ruleState){
-    if(cleared(tubes,cap,rules))return false;
+    if(cleared(tubes,cap,rules,ruleState))return false;
     if(canFlip(rules,ruleState))return false;
     if(canDye(tubes,rules,ruleState))return false;
     for(var from=0;from<tubes.length;from++)for(var to=0;to<tubes.length;to++)if(legal(tubes,from,to,cap,rules,ruleState))return false;
     return true;
   }
   function tubeRole(rules,ruleState,index){
-    if(rules&&rules.targets&&rules.targets[index])return 'target:'+rules.targets[index];
-    if(isTubeLocked(rules,ruleState,index))return 'locked:'+index;
-    var portal=portalForTube(rules,index);if(portal)return 'portal-'+portal.role+':'+portal.entry+'>'+portal.exit;
-    return 'free';
+    var roles=[];if(rules&&rules.targets&&rules.targets[index])roles.push('target:'+rules.targets[index]);
+    if(isTubeLocked(rules,ruleState,index))roles.push('locked:'+index);
+    var portal=portalForTube(rules,index);if(portal)roles.push('portal-'+portal.role+':'+portal.entry+'>'+portal.exit);
+    var serve=serveForTube(rules,ruleState,index);if(serve)roles.push('serve:'+serve.laneIndex+':'+serve.served+'/'+serve.total+':'+(serve.current?serve.current.target:'done'));
+    return roles.join('&')||'free';
   }
   function ruleKey(rules,ruleState){
     if(!hasSpecialRules(rules))return '';
-    var locks=lockedTubes(rules).slice().sort(function(a,b){return a-b;}).join(','),targets=targetEntries(rules).map(function(i){return i+':'+rules.targets[i];}).join(','),chain=unlockChain(rules).map(function(step){return step.color+':'+step.tube;}).join(','),portals=portalPairs(rules).map(function(pair){return pair.entry+'>'+pair.exit;}).join(','),stock=dyeColors(rules).map(function(color){return color+':'+dyeStock(rules)[color];}).join(','),goals=Object.keys(dyeGoals(rules)).sort().map(function(color){return color+':'+dyeGoals(rules)[color];}).join(','),used=dyeColors(rules).map(function(color){return color+':'+Math.max(0,ruleState&&ruleState.dyeUsed&&ruleState.dyeUsed[color]||0);}).join(',');
-    return 'r[l:'+locks+';u:'+(rules.unlockAfterCompleted||1)+';t:'+targets+';c:'+chain+';o:'+portals+';f:'+flipLimit(rules)+';g:'+forgeLimit(rules)+';p:'+stock+';n:'+goals+'];s:'+(ruleState&&ruleState.locksOpen?1:0)+','+Math.max(0,ruleState&&ruleState.chainIndex||0)+','+Math.max(0,ruleState&&ruleState.flipsRemaining||0)+','+(ruleState&&ruleState.isFlipped?1:0)+','+Math.max(0,ruleState&&ruleState.forgeRemaining||0)+','+used+'|';
+    var locks=lockedTubes(rules).slice().sort(function(a,b){return a-b;}).join(','),targets=targetEntries(rules).map(function(i){return i+':'+rules.targets[i];}).join(','),chain=unlockChain(rules).map(function(step){return step.color+':'+step.tube;}).join(','),portals=portalPairs(rules).map(function(pair){return pair.entry+'>'+pair.exit;}).join(','),serve=serveLanes(rules).map(function(lane){return lane.tube+':'+serveBatches(lane).map(function(batch){return batch.target+'@'+batch.balls.join('.');}).join('>');}).join(','),progress=serveLanes(rules).map(function(_,index){return Math.max(0,ruleState&&Array.isArray(ruleState.serveProgress)&&ruleState.serveProgress[index]||0);}).join(','),stock=dyeColors(rules).map(function(color){return color+':'+dyeStock(rules)[color];}).join(','),goals=Object.keys(dyeGoals(rules)).sort().map(function(color){return color+':'+dyeGoals(rules)[color];}).join(','),used=dyeColors(rules).map(function(color){return color+':'+Math.max(0,ruleState&&ruleState.dyeUsed&&ruleState.dyeUsed[color]||0);}).join(',');
+    return 'r[l:'+locks+';u:'+(rules.unlockAfterCompleted||1)+';t:'+targets+';c:'+chain+';o:'+portals+';v:'+serve+';f:'+flipLimit(rules)+';g:'+forgeLimit(rules)+';p:'+stock+';n:'+goals+'];s:'+(ruleState&&ruleState.locksOpen?1:0)+','+Math.max(0,ruleState&&ruleState.chainIndex||0)+','+Math.max(0,ruleState&&ruleState.flipsRemaining||0)+','+(ruleState&&ruleState.isFlipped?1:0)+','+Math.max(0,ruleState&&ruleState.forgeRemaining||0)+','+used+',v:'+progress+'|';
   }
   // Only tubes with a special rule keep their position. All other tube
   // permutations still share one visited/cache entry.
@@ -96,6 +108,7 @@
     if(!(ruleState&&ruleState.locksOpen))lockedTubes(rules).forEach(function(i){fixed[i]=1;});
     unlockChain(rules).forEach(function(step){if(isTubeLocked(rules,ruleState,step.tube))fixed[step.tube]=1;});
     portalPairs(rules).forEach(function(pair){fixed[pair.entry]=1;fixed[pair.exit]=1;});
+    serveLanes(rules).forEach(function(lane){fixed[lane.tube]=1;});
     var positioned=[];tubes.forEach(function(t,i){if(fixed[i])positioned.push(i+':'+t.join(','));else free.push(t.join(','));});
     return cap+'|'+ruleKey(rules,ruleState)+'fixed:'+positioned.join('|')+'|free:'+free.sort().join('|');
   }
@@ -111,7 +124,7 @@
       budget=Math.max(1,budget||250);
       while(stack.length&&budget--){
         var node=stack.pop(),board=node.board;
-        if(cleared(board,cap,rules)){finished='solvable';cacheSet(startKey,finished);return finished;}
+        if(cleared(board,cap,rules,node.ruleState)){finished='solvable';cacheSet(startKey,finished);return finished;}
         var destinations={};
         for(var from=0;from<board.length;from++){
           if(!board[from].length)continue;
@@ -151,7 +164,7 @@
       if(finished)return finished;budget=Math.max(1,budget||250);
       while(cursor<queue.length&&budget--){
         var node=queue[cursor++];
-        if(cleared(node.board,cap,rules)){finished={status:'solved',move:node.first,distance:node.depth,visited:visited.size};return finished;}
+        if(cleared(node.board,cap,rules,node.ruleState)){finished={status:'solved',move:node.first,distance:node.depth,visited:visited.size};return finished;}
         var equivalent={};
         for(var from=0;from<node.board.length;from++)for(var to=0;to<node.board.length;to++){
           if(!legal(node.board,from,to,cap,rules,node.ruleState))continue;
@@ -178,5 +191,5 @@
     }
     return {step:step,key:stateKey(start,cap,rules,startState),get visited(){return visited.size;}};
   }
-  window.CRGame={clone:clone,cloneRuleState:cloneRuleState,createRuleState:createRuleState,isTubeLocked:isTubeLocked,chainStepForTube:chainStepForTube,completedCount:completedCount,topRun:topRun,isLegalMove:legal,applyMove:move,canFlip:canFlip,applyFlip:flip,dyeChoices:dyeChoices,canDye:canDye,applyDye:dye,dyeNeeds:dyeNeeds,portalPairs:portalPairs,portalForTube:portalForTube,portalExit:portalExit,isCleared:cleared,isStuck:stuck,stateKey:stateKey,createSolveSearch:createSolveSearch,createHintSearch:createHintSearch,cachedSolvability:cachedSolvability};
+  window.CRGame={clone:clone,cloneRuleState:cloneRuleState,createRuleState:createRuleState,isTubeLocked:isTubeLocked,chainStepForTube:chainStepForTube,completedCount:completedCount,topRun:topRun,isLegalMove:legal,applyMove:move,canFlip:canFlip,applyFlip:flip,dyeChoices:dyeChoices,canDye:canDye,applyDye:dye,dyeNeeds:dyeNeeds,portalPairs:portalPairs,portalForTube:portalForTube,portalExit:portalExit,serveLanes:serveLanes,serveStatus:serveStatus,serveForTube:serveForTube,serveTotal:serveTotal,servedCount:servedCount,processServe:processServe,isCleared:cleared,isStuck:stuck,stateKey:stateKey,createSolveSearch:createSolveSearch,createHintSearch:createHintSearch,cachedSolvability:cachedSolvability};
 }());

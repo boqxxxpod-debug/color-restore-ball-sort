@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#eaf7ff">
   <title>Color Restore - Ball Sort Puzzle</title>
-  <link rel="stylesheet" href="./css/style.css?v=20260910-2">
+  <link rel="stylesheet" href="./css/style.css?v=20260913-1">
 </head>
 <body>
   <main id="app">
@@ -27,7 +27,7 @@
         <button id="home-btn" class="icon-btn" aria-label="ステージ選択へ">⌂</button>
         <div class="game-identity">
           <small id="world-name">GARDEN</small>
-          <b class="level-progress" aria-label="全75レベル中、現在レベル1">LEVEL <span id="stage-number">1</span> <span aria-hidden="true">/</span> <span id="stage-total">75</span></b>
+          <b class="level-progress" aria-label="全80レベル中、現在レベル1">LEVEL <span id="stage-number">1</span> <span aria-hidden="true">/</span> <span id="stage-total">80</span></b>
         </div>
         <div class="game-stats">
           <span class="moves"><small>MOVES</small><b id="move-count">0</b></span>
@@ -41,6 +41,7 @@
         <div class="scenery" aria-hidden="true"></div><svg id="portal-lines" class="portal-lines hidden" aria-hidden="true"></svg><div id="tube-board" class="tube-board" aria-label="ボールソート盤面"></div>
         <div id="tutorial" class="tutorial hidden"><span>☝</span><b>この筒をタップ</b><small>空の筒か同じ色の上へ1個移動しよう</small></div>
       </div>
+      <div id="serve-area" class="serve-area hidden" aria-live="polite" aria-label="出荷便と到着待ちキュー"></div>
       <div id="forge-area" class="forge-area hidden">
         <button id="forge-btn" class="forge-control" aria-label="選択した無色球を染色" aria-expanded="false" aria-controls="forge-picker"><span aria-hidden="true">⚗</span><b>COLOR FORGE</b><small id="forge-count">残り0回</small></button>
         <div id="forge-picker" class="forge-picker hidden" role="group" aria-labelledby="forge-picker-title"><b id="forge-picker-title">染める色を選ぶ</b><small>結果を確認してから決定できます</small><div id="forge-options" class="forge-options"></div><button id="forge-cancel-btn" class="forge-cancel">キャンセル</button></div>
@@ -54,5 +55,5 @@
   <div id="limit-modal" class="modal limit-modal" role="alertdialog" aria-modal="true" aria-labelledby="limit-title"><div class="modal-card"><div class="limit-mark" aria-hidden="true">⏱</div><p>MOVE LIMIT</p><h2 id="limit-title">手数オーバー</h2><p class="stuck-help">規定手数に達しました<br>UNDO または RESTART してください</p><button id="limit-undo-btn" class="primary">UNDO</button><button id="limit-restart-btn" class="secondary">RESTART</button></div></div>
   <div id="clear-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="clear-title"><div class="modal-card"><div class="clear-star">★</div><p>WONDERFUL!</p><h2 id="clear-title">STAGE CLEAR</h2><div class="result"><span>MOVES <b id="result-moves">0</b></span><span>BEST <b id="result-best">0</b></span></div><button id="next-btn" class="primary">NEXT STAGE</button><button id="replay-btn" class="secondary">REPLAY</button><button id="modal-select-btn" class="text-btn">STAGE SELECT</button></div></div>
   <div id="toast" role="status" aria-live="polite"></div><div id="confetti" aria-hidden="true"></div>
-  <script src="./data/stages.js?v=20260910-2"></script><script src="./data/advanced-stages.js?v=20260910-2"></script><script src="./data/progression.js?v=20260910-2"></script><script src="./data/flip-stages.js?v=20260910-2"></script><script src="./data/forge-stages.js?v=20260910-2"></script><script src="./data/portal-stages.js?v=20260910-2"></script><script src="./js/storage.js?v=20260910-2"></script><script src="./js/sound.js?v=20260910-2"></script><script src="./js/game.js?v=20260910-2"></script><script src="./js/hint.js?v=20260910-2"></script><script src="./js/stage.js?v=20260910-2"></script><script src="./js/app.js?v=20260910-2"></script>
+  <script src="./data/stages.js?v=20260913-1"></script><script src="./data/advanced-stages.js?v=20260913-1"></script><script src="./data/progression.js?v=20260913-1"></script><script src="./data/flip-stages.js?v=20260913-1"></script><script src="./data/forge-stages.js?v=20260913-1"></script><script src="./data/portal-stages.js?v=20260913-1"></script><script src="./data/serve-stages.js?v=20260913-1"></script><script src="./js/storage.js?v=20260913-1"></script><script src="./js/sound.js?v=20260913-1"></script><script src="./js/game.js?v=20260913-1"></script><script src="./js/hint.js?v=20260913-1"></script><script src="./js/stage.js?v=20260913-1"></script><script src="./js/app.js?v=20260913-1"></script>
 </body></html>
