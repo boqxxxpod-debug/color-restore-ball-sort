@@ -10,7 +10,8 @@
     {key:'flip',name:'FLIP LAB',label:'Flip Lab',start:61,end:65},
     {key:'forge',name:'COLOR FORGE',label:'Color Forge',start:66,end:70},
     {key:'portal',name:'PORTAL TUBES',label:'Portal Tubes',start:71,end:75},
-    {key:'serve',name:'SORT & SERVE',label:'Sort & Serve',start:76,end:80}
+    {key:'serve',name:'SORT & SERVE',label:'Sort & Serve',start:76,end:80},
+    {key:'combo',name:'COMBO FLOW',label:'Combo Flow',start:81,end:85}
   ];
   function available(total){return worlds.filter(function(w){return w.start<=total;}).map(function(w){return {key:w.key,name:w.name,label:w.label,start:w.start,end:Math.min(w.end,total)};});}
   function worldFor(id){for(var i=0;i<worlds.length;i++)if(id>=worlds[i].start&&id<=worlds[i].end)return worlds[i];return worlds[worlds.length-1];}

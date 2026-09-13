@@ -81,7 +81,7 @@ const copied=G.cloneRuleState(redUsed);copied.dyeUsed.red=0;assert.equal(redUsed
 
 const html=fs.readFileSync('index.html','utf8'),app=fs.readFileSync('js/app.js','utf8'),css=fs.readFileSync('css/style.css','utf8');
 assert(html.includes('id="forge-btn"')&&html.includes('id="forge-options"'),'COLOR FORGE has a dedicated accessible picker');
-assert(html.includes('data/forge-stages.js?v=20260913-1'),'forge stage data is loaded after FLIP LAB');
+assert(html.includes('data/forge-stages.js?v=20260913-2'),'forge stage data is loaded after FLIP LAB');
 assert(app.includes("result.move.type==='dye'")&&app.includes('CRGame.applyDye'),'normal input and Hint expose deterministic dye choices');
 assert(css.includes('.ball.gray')&&css.includes('@media(max-width:370px){.forge-control'),'colorless balls and the 360px control have explicit styles');
 

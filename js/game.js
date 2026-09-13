@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   function clone(t){return t.map(function(x){return x.slice();});}
-  function cloneRuleState(state){var used={},source=state&&state.dyeUsed||{},serveProgress=state&&Array.isArray(state.serveProgress)?state.serveProgress.map(function(value){return Math.max(0,Number.isInteger(value)?value:0);}):[];Object.keys(source).forEach(function(color){if(Number.isInteger(source[color])&&source[color]>0)used[color]=source[color];});return {locksOpen:!!(state&&state.locksOpen),chainIndex:Math.max(0,state&&Number.isInteger(state.chainIndex)?state.chainIndex:0),flipsRemaining:Math.max(0,state&&Number.isInteger(state.flipsRemaining)?state.flipsRemaining:0),flipsUsed:Math.max(0,state&&Number.isInteger(state.flipsUsed)?state.flipsUsed:0),isFlipped:!!(state&&state.isFlipped),forgeRemaining:Math.max(0,state&&Number.isInteger(state.forgeRemaining)?state.forgeRemaining:0),dyesUsed:Math.max(0,state&&Number.isInteger(state.dyesUsed)?state.dyesUsed:0),dyeUsed:used,serveProgress:serveProgress};}
+  function cloneRuleState(state){var used={},source=state&&state.dyeUsed||{},serveProgress=state&&Array.isArray(state.serveProgress)?state.serveProgress.map(function(value){return Math.max(0,Number.isInteger(value)?value:0);}):[];Object.keys(source).forEach(function(color){if(Number.isInteger(source[color])&&source[color]>0)used[color]=source[color];});return {locksOpen:!!(state&&state.locksOpen),chainIndex:Math.max(0,state&&Number.isInteger(state.chainIndex)?state.chainIndex:0),flipsRemaining:Math.max(0,state&&Number.isInteger(state.flipsRemaining)?state.flipsRemaining:0),flipsUsed:Math.max(0,state&&Number.isInteger(state.flipsUsed)?state.flipsUsed:0),isFlipped:!!(state&&state.isFlipped),forgeRemaining:Math.max(0,state&&Number.isInteger(state.forgeRemaining)?state.forgeRemaining:0),dyesUsed:Math.max(0,state&&Number.isInteger(state.dyesUsed)?state.dyesUsed:0),dyeUsed:used,serveProgress:serveProgress,comboGauge:Math.max(0,state&&Number.isInteger(state.comboGauge)?state.comboGauge:0),comboColor:state&&typeof state.comboColor==='string'?state.comboColor:'',flowReady:!!(state&&state.flowReady),flowsEarned:Math.max(0,state&&Number.isInteger(state.flowsEarned)?state.flowsEarned:0),flowsUsed:Math.max(0,state&&Number.isInteger(state.flowsUsed)?state.flowsUsed:0),lastMoveCount:Math.max(0,state&&Number.isInteger(state.lastMoveCount)?state.lastMoveCount:0)};}
   function topRun(tube){if(!tube.length)return 0;var c=tube[tube.length-1],n=0;for(var i=tube.length-1;i>=0&&tube[i]===c;i--)n++;return n;}
   function completeTube(tube,cap){return tube.length===cap&&tube[0]!=='gray'&&tube.every(function(c){return c===tube[0];});}
   function completedCount(tubes,cap){return tubes.reduce(function(n,tube){return n+(completeTube(tube,cap)?1:0);},0);}
@@ -14,6 +14,8 @@
     return null;
   }
   function targetEntries(rules){return rules&&rules.targets?Object.keys(rules.targets).map(Number).sort(function(a,b){return a-b;}):[];}
+  function comboThreshold(rules){return Math.max(0,rules&&Number.isInteger(rules.comboThreshold)?rules.comboThreshold:0);}
+  function requiredFlows(rules){return comboThreshold(rules)?Math.max(1,rules&&Number.isInteger(rules.requiredFlows)?rules.requiredFlows:1):0;}
   function flipLimit(rules){return Math.max(0,rules&&Number.isInteger(rules.flipLimit)?rules.flipLimit:0);}
   function forgeLimit(rules){return Math.max(0,rules&&Number.isInteger(rules.forgeLimit)?rules.forgeLimit:0);}
   function dyeStock(rules){return rules&&rules.dyeStock&&typeof rules.dyeStock==='object'?rules.dyeStock:{};}
@@ -33,10 +35,10 @@
   function dyeColors(rules){var order=['red','blue','yellow','green','purple','orange','cyan','pink'];return Object.keys(dyeStock(rules)).filter(function(color){return Number.isInteger(dyeStock(rules)[color])&&dyeStock(rules)[color]>0;}).sort(function(a,b){var ai=order.indexOf(a),bi=order.indexOf(b);return (ai<0?999:ai)-(bi<0?999:bi)||a.localeCompare(b);});}
   function colorCounts(tubes){var counts={};tubes.forEach(function(tube){tube.forEach(function(color){if(color!=='gray')counts[color]=(counts[color]||0)+1;});});return counts;}
   function dyeNeeds(tubes,rules){var counts=colorCounts(tubes),needs={};Object.keys(dyeGoals(rules)).forEach(function(color){var needed=Math.max(0,dyeGoals(rules)[color]-(counts[color]||0));if(needed)needs[color]=needed;});return needs;}
-  function hasSpecialRules(rules){return !!(rules&&(lockedTubes(rules).length||targetEntries(rules).length||unlockChain(rules).length||flipLimit(rules)||forgeLimit(rules)||portalPairs(rules).length||serveLanes(rules).length));}
+  function hasSpecialRules(rules){return !!(rules&&(lockedTubes(rules).length||targetEntries(rules).length||unlockChain(rules).length||flipLimit(rules)||forgeLimit(rules)||portalPairs(rules).length||serveLanes(rules).length||comboThreshold(rules)));}
   function createRuleState(tubes,cap,rules){
     var locks=lockedTubes(rules),threshold=rules&&rules.unlockAfterCompleted||1;
-    var state={locksOpen:!locks.length||completedCount(tubes,cap)>=threshold,chainIndex:0,flipsRemaining:flipLimit(rules),flipsUsed:0,isFlipped:false,forgeRemaining:forgeLimit(rules),dyesUsed:0,dyeUsed:{},serveProgress:serveLanes(rules).map(function(){return 0;})};
+    var state={locksOpen:!locks.length||completedCount(tubes,cap)>=threshold,chainIndex:0,flipsRemaining:flipLimit(rules),flipsUsed:0,isFlipped:false,forgeRemaining:forgeLimit(rules),dyesUsed:0,dyeUsed:{},serveProgress:serveLanes(rules).map(function(){return 0;}),comboGauge:0,comboColor:'',flowReady:false,flowsEarned:0,flowsUsed:0,lastMoveCount:0};
     updateRuleState(tubes,cap,rules,state);return state;
   }
   function isTubeLocked(rules,ruleState,index){
@@ -59,17 +61,37 @@
     var exit=portalExit(rules,to);if(exit>=0&&(exit===from||!tubes[exit]||tubes[exit].length>=cap||isTubeLocked(rules,ruleState,exit)))return false;
     return true;
   }
-  function move(tubes,from,to,cap,rules,ruleState){if(!legal(tubes,from,to,cap,rules,ruleState))return 0;var ball=tubes[from].pop(),exit=portalExit(rules,to);tubes[exit>=0?exit:to].push(ball);updateRuleState(tubes,cap,rules,ruleState);return 1;}
+  function breakCombo(rules,ruleState){if(!ruleState||!comboThreshold(rules))return;ruleState.lastMoveCount=0;if(ruleState.flowReady)return;ruleState.comboGauge=0;ruleState.comboColor='';}
+  function flowMoveCount(tubes,from,to,cap,rules,ruleState){
+    if(!legal(tubes,from,to,cap,rules,ruleState))return 0;
+    var exit=portalExit(rules,to),destination=tubes[exit>=0?exit:to],available=cap-destination.length;
+    return comboThreshold(rules)&&ruleState&&ruleState.flowReady?Math.max(1,Math.min(topRun(tubes[from]),available)):1;
+  }
+  function comboMoveInfo(tubes,from,to,cap,rules,ruleState){
+    var threshold=comboThreshold(rules),count=flowMoveCount(tubes,from,to,cap,rules,ruleState);if(!threshold||!count)return null;
+    var color=tubes[from][tubes[from].length-1],usesFlow=!!(ruleState&&ruleState.flowReady),destination=tubes[to],qualifies=!!(destination.length&&destination[destination.length-1]===color),gauge=Math.min(threshold,Math.max(0,ruleState&&ruleState.comboGauge||0)),sameChain=qualifies&&gauge>0&&ruleState.comboColor===color,nextGauge=usesFlow?0:qualifies?Math.min(threshold,sameChain?gauge+1:1):0;
+    return {color:color,count:count,usesFlow:usesFlow,qualifies:qualifies,sameChain:sameChain,nextGauge:nextGauge,earnsFlow:!usesFlow&&qualifies&&nextGauge>=threshold,breakReason:usesFlow||!gauge?'':!qualifies?'empty':ruleState.comboColor!==color?'color':''};
+  }
+  function updateComboAfterMove(rules,ruleState,info){
+    if(!ruleState)return;ruleState.lastMoveCount=info&&info.count||1;if(!comboThreshold(rules)||!info)return;
+    if(info.usesFlow){ruleState.flowReady=false;ruleState.flowsUsed=Math.max(0,ruleState.flowsUsed||0)+1;ruleState.comboGauge=0;ruleState.comboColor='';return;}
+    if(!info.qualifies){ruleState.comboGauge=0;ruleState.comboColor='';return;}
+    ruleState.comboGauge=info.nextGauge;ruleState.comboColor=info.color;
+    if(info.earnsFlow){ruleState.flowReady=true;ruleState.flowsEarned=Math.max(0,ruleState.flowsEarned||0)+1;}
+  }
+  function flowStatus(rules,ruleState){var threshold=comboThreshold(rules),goal=requiredFlows(rules);return threshold?{threshold:threshold,gauge:Math.min(threshold,Math.max(0,ruleState&&ruleState.comboGauge||0)),color:ruleState&&ruleState.comboColor||'',ready:!!(ruleState&&ruleState.flowReady),earned:Math.max(0,ruleState&&ruleState.flowsEarned||0),used:Math.max(0,ruleState&&ruleState.flowsUsed||0),required:goal,lastMoveCount:Math.max(0,ruleState&&ruleState.lastMoveCount||0)}:null;}
+  function move(tubes,from,to,cap,rules,ruleState){if(!legal(tubes,from,to,cap,rules,ruleState))return 0;var info=comboMoveInfo(tubes,from,to,cap,rules,ruleState),count=info?info.count:1,exit=portalExit(rules,to),destination=tubes[exit>=0?exit:to];for(var moved=0;moved<count;moved++)destination.push(tubes[from].pop());updateComboAfterMove(rules,ruleState,info);updateRuleState(tubes,cap,rules,ruleState);return count;}
   function canFlip(rules,ruleState){return flipLimit(rules)>0&&!!ruleState&&ruleState.flipsRemaining>0;}
-  function flip(tubes,rules,ruleState){if(!canFlip(rules,ruleState))return 0;tubes.forEach(function(tube){tube.reverse();});ruleState.flipsRemaining--;ruleState.flipsUsed++;ruleState.isFlipped=!ruleState.isFlipped;return 1;}
+  function flip(tubes,rules,ruleState){if(!canFlip(rules,ruleState))return 0;tubes.forEach(function(tube){tube.reverse();});ruleState.flipsRemaining--;ruleState.flipsUsed++;ruleState.isFlipped=!ruleState.isFlipped;breakCombo(rules,ruleState);return 1;}
   function dyeChoices(tubes,index,rules,ruleState){
     if(forgeLimit(rules)<=0||!ruleState||ruleState.forgeRemaining<=0||!tubes[index]||tubes[index][tubes[index].length-1]!=='gray'||isTubeLocked(rules,ruleState,index))return [];
     var used=ruleState.dyeUsed&&typeof ruleState.dyeUsed==='object'?ruleState.dyeUsed:{};
     return dyeColors(rules).filter(function(color){return Math.max(0,dyeStock(rules)[color]-(used[color]||0))>0;});
   }
   function canDye(tubes,rules,ruleState){for(var i=0;i<tubes.length;i++)if(dyeChoices(tubes,i,rules,ruleState).length)return true;return false;}
-  function dye(tubes,index,color,cap,rules,ruleState){if(dyeChoices(tubes,index,rules,ruleState).indexOf(color)<0)return 0;tubes[index][tubes[index].length-1]=color;ruleState.forgeRemaining--;ruleState.dyesUsed=Math.max(0,Number.isInteger(ruleState.dyesUsed)?ruleState.dyesUsed:0)+1;if(!ruleState.dyeUsed||typeof ruleState.dyeUsed!=='object')ruleState.dyeUsed={};ruleState.dyeUsed[color]=(ruleState.dyeUsed[color]||0)+1;updateRuleState(tubes,cap,rules,ruleState);return 1;}
+  function dye(tubes,index,color,cap,rules,ruleState){if(dyeChoices(tubes,index,rules,ruleState).indexOf(color)<0)return 0;tubes[index][tubes[index].length-1]=color;ruleState.forgeRemaining--;ruleState.dyesUsed=Math.max(0,Number.isInteger(ruleState.dyesUsed)?ruleState.dyesUsed:0)+1;if(!ruleState.dyeUsed||typeof ruleState.dyeUsed!=='object')ruleState.dyeUsed={};ruleState.dyeUsed[color]=(ruleState.dyeUsed[color]||0)+1;breakCombo(rules,ruleState);updateRuleState(tubes,cap,rules,ruleState);return 1;}
   function cleared(tubes,cap,rules,ruleState){
+    if(comboThreshold(rules)&&Math.max(0,ruleState&&ruleState.flowsUsed||0)<requiredFlows(rules))return false;
     if(serveLanes(rules).length)return servedCount(rules,ruleState)===serveTotal(rules);
     if(forgeLimit(rules)&&tubes.some(function(tube){return tube.indexOf('gray')>=0;}))return false;
     if(forgeLimit(rules)){
@@ -96,8 +118,8 @@
   }
   function ruleKey(rules,ruleState){
     if(!hasSpecialRules(rules))return '';
-    var locks=lockedTubes(rules).slice().sort(function(a,b){return a-b;}).join(','),targets=targetEntries(rules).map(function(i){return i+':'+rules.targets[i];}).join(','),chain=unlockChain(rules).map(function(step){return step.color+':'+step.tube;}).join(','),portals=portalPairs(rules).map(function(pair){return pair.entry+'>'+pair.exit;}).join(','),serve=serveLanes(rules).map(function(lane){return lane.tube+':'+serveBatches(lane).map(function(batch){return batch.target+'@'+batch.balls.join('.');}).join('>');}).join(','),progress=serveLanes(rules).map(function(_,index){return Math.max(0,ruleState&&Array.isArray(ruleState.serveProgress)&&ruleState.serveProgress[index]||0);}).join(','),stock=dyeColors(rules).map(function(color){return color+':'+dyeStock(rules)[color];}).join(','),goals=Object.keys(dyeGoals(rules)).sort().map(function(color){return color+':'+dyeGoals(rules)[color];}).join(','),used=dyeColors(rules).map(function(color){return color+':'+Math.max(0,ruleState&&ruleState.dyeUsed&&ruleState.dyeUsed[color]||0);}).join(',');
-    return 'r[l:'+locks+';u:'+(rules.unlockAfterCompleted||1)+';t:'+targets+';c:'+chain+';o:'+portals+';v:'+serve+';f:'+flipLimit(rules)+';g:'+forgeLimit(rules)+';p:'+stock+';n:'+goals+'];s:'+(ruleState&&ruleState.locksOpen?1:0)+','+Math.max(0,ruleState&&ruleState.chainIndex||0)+','+Math.max(0,ruleState&&ruleState.flipsRemaining||0)+','+(ruleState&&ruleState.isFlipped?1:0)+','+Math.max(0,ruleState&&ruleState.forgeRemaining||0)+','+used+',v:'+progress+'|';
+    var locks=lockedTubes(rules).slice().sort(function(a,b){return a-b;}).join(','),targets=targetEntries(rules).map(function(i){return i+':'+rules.targets[i];}).join(','),chain=unlockChain(rules).map(function(step){return step.color+':'+step.tube;}).join(','),portals=portalPairs(rules).map(function(pair){return pair.entry+'>'+pair.exit;}).join(','),serve=serveLanes(rules).map(function(lane){return lane.tube+':'+serveBatches(lane).map(function(batch){return batch.target+'@'+batch.balls.join('.');}).join('>');}).join(','),progress=serveLanes(rules).map(function(_,index){return Math.max(0,ruleState&&Array.isArray(ruleState.serveProgress)&&ruleState.serveProgress[index]||0);}).join(','),stock=dyeColors(rules).map(function(color){return color+':'+dyeStock(rules)[color];}).join(','),goals=Object.keys(dyeGoals(rules)).sort().map(function(color){return color+':'+dyeGoals(rules)[color];}).join(','),used=dyeColors(rules).map(function(color){return color+':'+Math.max(0,ruleState&&ruleState.dyeUsed&&ruleState.dyeUsed[color]||0);}).join(','),combo=comboThreshold(rules),flowGoal=requiredFlows(rules),gauge=Math.min(combo,Math.max(0,ruleState&&ruleState.comboGauge||0)),comboColor=gauge&&ruleState&&ruleState.comboColor||'',flowUsed=Math.min(flowGoal,Math.max(0,ruleState&&ruleState.flowsUsed||0));
+    return 'r[l:'+locks+';u:'+(rules.unlockAfterCompleted||1)+';t:'+targets+';c:'+chain+';o:'+portals+';v:'+serve+';f:'+flipLimit(rules)+';g:'+forgeLimit(rules)+';p:'+stock+';n:'+goals+';b:'+combo+'/'+flowGoal+'];s:'+(ruleState&&ruleState.locksOpen?1:0)+','+Math.max(0,ruleState&&ruleState.chainIndex||0)+','+Math.max(0,ruleState&&ruleState.flipsRemaining||0)+','+(ruleState&&ruleState.isFlipped?1:0)+','+Math.max(0,ruleState&&ruleState.forgeRemaining||0)+','+used+',v:'+progress+',b:'+gauge+'@'+comboColor+'@'+(ruleState&&ruleState.flowReady?1:0)+'@'+flowUsed+'|';
   }
   // Only tubes with a special rule keep their position. All other tube
   // permutations still share one visited/cache entry.
@@ -169,9 +191,9 @@
         for(var from=0;from<node.board.length;from++)for(var to=0;to<node.board.length;to++){
           if(!legal(node.board,from,to,cap,rules,node.ruleState))continue;
           var signature=equivalentSignature(node.board,from,to,rules,node.ruleState);if(equivalent[signature])continue;equivalent[signature]=1;
-          var next=clone(node.board),nextState=cloneRuleState(node.ruleState);move(next,from,to,cap,rules,nextState);var key=stateKey(next,cap,rules,nextState);if(visited.has(key))continue;
+          var next=clone(node.board),nextState=cloneRuleState(node.ruleState),wasFlow=!!nextState.flowReady,moved=move(next,from,to,cap,rules,nextState),firstMove={from:from,to:to};if(comboThreshold(rules)){firstMove.count=moved;firstMove.flow=wasFlow;}var key=stateKey(next,cap,rules,nextState);if(visited.has(key))continue;
           if(visited.size>=maxVisited){finished={status:'unknown',move:null,distance:null,visited:visited.size};return finished;}
-          visited.add(key);queue.push({board:next,ruleState:nextState,first:node.first||{from:from,to:to},depth:node.depth+1});
+          visited.add(key);queue.push({board:next,ruleState:nextState,first:node.first||firstMove,depth:node.depth+1});
         }
         if(canFlip(rules,node.ruleState)){
           var flipped=clone(node.board),flippedState=cloneRuleState(node.ruleState);flip(flipped,rules,flippedState);var flipKey=stateKey(flipped,cap,rules,flippedState);
@@ -191,5 +213,5 @@
     }
     return {step:step,key:stateKey(start,cap,rules,startState),get visited(){return visited.size;}};
   }
-  window.CRGame={clone:clone,cloneRuleState:cloneRuleState,createRuleState:createRuleState,isTubeLocked:isTubeLocked,chainStepForTube:chainStepForTube,completedCount:completedCount,topRun:topRun,isLegalMove:legal,applyMove:move,canFlip:canFlip,applyFlip:flip,dyeChoices:dyeChoices,canDye:canDye,applyDye:dye,dyeNeeds:dyeNeeds,portalPairs:portalPairs,portalForTube:portalForTube,portalExit:portalExit,serveLanes:serveLanes,serveStatus:serveStatus,serveForTube:serveForTube,serveTotal:serveTotal,servedCount:servedCount,processServe:processServe,isCleared:cleared,isStuck:stuck,stateKey:stateKey,createSolveSearch:createSolveSearch,createHintSearch:createHintSearch,cachedSolvability:cachedSolvability};
+  window.CRGame={clone:clone,cloneRuleState:cloneRuleState,createRuleState:createRuleState,isTubeLocked:isTubeLocked,chainStepForTube:chainStepForTube,completedCount:completedCount,topRun:topRun,isLegalMove:legal,applyMove:move,comboThreshold:comboThreshold,requiredFlows:requiredFlows,flowMoveCount:flowMoveCount,comboMoveInfo:comboMoveInfo,flowStatus:flowStatus,breakCombo:breakCombo,canFlip:canFlip,applyFlip:flip,dyeChoices:dyeChoices,canDye:canDye,applyDye:dye,dyeNeeds:dyeNeeds,portalPairs:portalPairs,portalForTube:portalForTube,portalExit:portalExit,serveLanes:serveLanes,serveStatus:serveStatus,serveForTube:serveForTube,serveTotal:serveTotal,servedCount:servedCount,processServe:processServe,isCleared:cleared,isStuck:stuck,stateKey:stateKey,createSolveSearch:createSolveSearch,createHintSearch:createHintSearch,cachedSolvability:cachedSolvability};
 }());

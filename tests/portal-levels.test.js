@@ -74,7 +74,7 @@ assert.equal(level75.solution.filter(action=>action&&action.type==='dye').length
 const mapBoard=[['red'],[],[],[]],mapState=G.createRuleState(mapBoard,4,{portals:[{entry:1,exit:2}]});assert.notEqual(G.stateKey(mapBoard,4,{portals:[{entry:1,exit:2}]},mapState),G.stateKey(mapBoard,4,{portals:[{entry:1,exit:3}]},mapState),'stateKey includes the directed portal map');
 
 const html=fs.readFileSync('index.html','utf8'),app=fs.readFileSync('js/app.js','utf8'),css=fs.readFileSync('css/style.css','utf8');
-assert(html.includes('id="portal-lines"')&&html.includes('data/portal-stages.js?v=20260913-1'),'portal routes and stage data are loaded');
+assert(html.includes('id="portal-lines"')&&html.includes('data/portal-stages.js?v=20260913-2'),'portal routes and stage data are loaded');
 assert(app.includes("badge.className='portal-badge'")&&app.includes("portalBall.classList.add('warping-ball')"),'paired role badges and warp animation are wired');
 assert(app.includes("var portalOut=CRGame.portalExit(state.rules,result.move.to)"),'Hint evaluates and displays the final portal route');
 assert(css.includes('.portal-line')&&css.includes('@keyframes portalBall')&&css.includes('@media(max-width:370px){.portal-badge'),'symbols, line, animation, and 360px styles are explicit');
