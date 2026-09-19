@@ -3,6 +3,7 @@
   var $=function(s){return document.querySelector(s);};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s));};
   var save=CRStorage.load();
+  var allStagesEnabled=CRStorage.allStagesEnabled();
   var state={stageId:1,capacity:4,tubes:[],initialTubes:[],rules:{},ruleState:{locksOpen:true,chainIndex:0,flipsRemaining:0,flipsUsed:0,isFlipped:false,forgeRemaining:0,dyesUsed:0,dyeUsed:{},serveProgress:[],comboGauge:0,comboColor:'',flowReady:false,flowsEarned:0,flowsUsed:0,lastMoveCount:0},initialRuleState:{locksOpen:true,chainIndex:0,flipsRemaining:0,flipsUsed:0,isFlipped:false,forgeRemaining:0,dyesUsed:0,dyeUsed:{},serveProgress:[],comboGauge:0,comboColor:'',flowReady:false,flowsEarned:0,flowsUsed:0,lastMoveCount:0},moveLimit:null,selectedTube:null,moveCount:0,history:[],isAnimating:false,isChoosingDye:false,isCleared:false,isStuck:false,isLimitFailed:false};
   var app=window.ColorRestore={save:save,state:state};
   var screens=$$('.screen'),board=$('#tube-board'),tutorialStep=0,hintTimer,solveTimer,solveGeneration=0;
@@ -14,7 +15,7 @@
     var worlds=CRStage.worlds(CR_STAGES.length);
     $('#world-tabs').innerHTML=worlds.map(function(w){var done=worldCompletion(w);return '<button data-start="'+w.start+'">'+w.label+'<small>'+done.count+'/'+done.total+'</small></button>';}).join('');
     var html='';
-    CR_STAGES.forEach(function(s){var locked=s.id>save.unlockedStage,done=save.clearedStages.indexOf(s.id)>=0;html+='<button class="stage-tile '+(locked?'locked ':'')+(done?'done':'')+'" data-stage="'+s.id+'" '+(locked?'disabled':'')+'><span>'+(locked?'🔒':s.id)+'</span><small>'+(done?'BEST '+save.bestMoves[s.id]:locked?'LOCKED':'PLAY')+'</small></button>';});
+    CR_STAGES.forEach(function(s){var locked=!allStagesEnabled&&s.id>save.unlockedStage,done=save.clearedStages.indexOf(s.id)>=0;html+='<button class="stage-tile '+(locked?'locked ':'')+(done?'done':'')+'" data-stage="'+s.id+'" '+(locked?'disabled':'')+'><span>'+(locked?'🔒':s.id)+'</span><small>'+(done?'BEST '+save.bestMoves[s.id]:locked?'LOCKED':'PLAY')+'</small></button>';});
     $('#stage-grid').innerHTML=html;
     $$('.stage-tile:not(.locked)').forEach(function(b){b.onclick=function(){loadStage(+b.dataset.stage);};});
     $$('#world-tabs button').forEach(function(b){b.onclick=function(){var tile=$('[data-stage="'+b.dataset.start+'"]');if(tile)tile.scrollIntoView({behavior:'smooth',block:'center'});};});
@@ -64,7 +65,7 @@
   function currentKey(){return CRGame.stateKey(state.tubes,state.capacity,state.rules,state.ruleState);}
   function searchOptions(maxVisited){return {maxVisited:maxVisited,rules:state.rules,ruleState:CRGame.cloneRuleState(state.ruleState)};}
   function loadStage(id){
-    var data=CR_STAGES[id-1];if(!data||id>save.unlockedStage)return;
+    var data=CR_STAGES[id-1];if(!data||(!allStagesEnabled&&id>save.unlockedStage))return;
     cancelWork();state.stageId=id;state.capacity=data.capacity||4;state.tubes=CRGame.clone(data.tubes);state.initialTubes=CRGame.clone(data.tubes);state.rules=data.rules||{};state.ruleState=CRGame.createRuleState(state.tubes,state.capacity,state.rules);state.initialRuleState=CRGame.cloneRuleState(state.ruleState);state.moveLimit=data.moveLimit||null;state.selectedTube=null;state.moveCount=0;state.history=[];state.isAnimating=false;state.isChoosingDye=false;state.isCleared=false;state.isStuck=false;state.isLimitFailed=false;tutorialStep=0;
     $('#clear-modal').classList.remove('open');$('#stuck-modal').classList.remove('open');$('#limit-modal').classList.remove('open');
     var w=CRStage.worldFor(id),world=$('#world'),total=CR_STAGES.length,done=worldCompletion(w);world.className='world '+w.key;world.style.setProperty('--gray',(100-(done.total?done.count/done.total*100:0))+'%');$('#world-name').textContent=w.name;$('#stage-number').textContent=id;$('#stage-total').textContent=total;$('#rule-chip').textContent=stageRuleLabel(data);$('.level-progress').setAttribute('aria-label','全'+total+'レベル中、現在レベル'+id);
