@@ -1,12 +1,26 @@
 (function () {
   'use strict';
   var KEY = 'colorRestoreSave';
+  var PLAYTEST_KEY = 'crPlaytestSession';
+  var PLAYTEST_HASH = '#cr-qa-85';
   var PROGRESSION_VERSION = 3;
   var V2_REBALANCED_THROUGH = 35;
   var V3_CHANGED = {15:1,26:1,27:1,28:1,29:1,30:1,31:1,32:1,33:1,34:1,35:1};
   var defaults = { unlockedStage: 1, clearedStages: [], bestMoves: {}, sound: true, vibration: true, tutorialCompleted: false, progressionVersion: PROGRESSION_VERSION };
   function maxStage() { return window.CR_STAGES && window.CR_STAGES.length ? window.CR_STAGES.length : 30; }
   function fresh() { return JSON.parse(JSON.stringify(defaults)); }
+  function enablePlaytestFromHash() {
+    try {
+      if (!window.location || window.location.hash !== PLAYTEST_HASH) return;
+      window.sessionStorage.setItem(PLAYTEST_KEY, '1');
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    } catch (_) {}
+  }
+  function allStagesEnabled() {
+    try { return window.sessionStorage.getItem(PLAYTEST_KEY) === '1'; } catch (_) { return false; }
+  }
   function migratedBestMoves(rawBest, rawVersion, max) {
     if (!rawBest || typeof rawBest !== 'object') return {};
     if (rawVersion === PROGRESSION_VERSION) return rawBest;
@@ -35,9 +49,11 @@
       progressionVersion: PROGRESSION_VERSION
     };
   }
+  enablePlaytestFromHash();
   window.CRStorage = {
     load: function () { try { return valid(JSON.parse(localStorage.getItem(KEY))); } catch (_) { return fresh(); } },
     save: function (data) { try { localStorage.setItem(KEY, JSON.stringify(valid(data))); return true; } catch (_) { return false; } },
+    allStagesEnabled: allStagesEnabled,
     defaults: fresh
   };
 }());
